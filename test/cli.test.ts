@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rename, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { checkEntry, entryUrl, formatProjectList, parseArgs } from "../src/cli.ts";
+import { checkEntry, entryUrl, formatProjectList, main, parseArgs } from "../src/cli.ts";
 import { createArchive } from "../src/presets/archive.ts";
 import { createBriefing } from "../src/presets/briefing.ts";
 import { createPitch } from "../src/presets/pitch.ts";
@@ -98,6 +98,18 @@ test("rejects executable fragment markup", () => {
   for (const tag of ["script", "style"]) {
     assert.throws(() => validateFragment(`<${tag}></${tag}>`, "fragment.html"), /unsafe <script> or <style>/);
   }
+  assert.throws(
+    () => validateFragment('<img src="missing.png" onerror="globalThis.pwned = true">', "fragment.html"),
+    /unsafe event handler attribute/,
+  );
+  assert.throws(
+    () => validateFragment('<iframe srcdoc="<script>alert(1)</script>"></iframe>', "fragment.html"),
+    /unsafe srcdoc attribute/,
+  );
+  assert.throws(
+    () => validateFragment('<a href="java&#x0A;script:alert(1)">open</a>', "fragment.html"),
+    /unsafe URL/,
+  );
 });
 
 test("rejects file URLs in generated HTML", async () => {
@@ -272,15 +284,34 @@ test("refuses to scaffold into a non-empty directory", async () => {
 test("managed check enforces pitch sections after the project is recorded", async () => {
   const fixture = fileURLToPath(new URL("fixtures/pitch", import.meta.url));
   const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-check-pitch-"));
-  const entry = await createPitch(fixture, path.join(directory, "index.html"));
-  await recordProject(directory, "pitch", entry, "0.1.0");
+  const project = path.join(directory, "project");
+  const entry = await createPitch(fixture, path.join(directory, "dist", "custom.html"));
+  await mkdir(project);
+  await recordProject(project, "pitch", entry, "0.1.0");
 
-  assert.equal(await checkEntry(directory), entry);
+  assert.equal(await checkEntry(project), entry);
 
   let html = await readFile(entry, "utf8");
   html = html.replace(/<section\b[^>]*\bid=(["'])cta\1[^>]*>[\s\S]*?<\/section>/i, "");
   await writeFile(entry, html);
-  await assert.rejects(checkEntry(directory), /missing required section #cta/);
+  await assert.rejects(checkEntry(project), /missing required section #cta/);
+});
+
+test("create preserves managed output when the requested preset conflicts", async () => {
+  const fixture = fileURLToPath(new URL("fixtures/briefing", import.meta.url));
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-create-conflict-"));
+  const entry = path.join(directory, "index.html");
+  const original = "<html><head></head><body>last good output</body></html>";
+  await cp(path.join(fixture, "src"), path.join(directory, "src"), { recursive: true });
+  await writeFile(entry, original);
+  await recordProject(directory, "pitch", entry, "0.1.0");
+
+  try {
+    await assert.rejects(main(["create", "briefing", directory]), /preset is pitch, not briefing/);
+    assert.equal(await readFile(entry, "utf8"), original);
+  } finally {
+    await rm(directory, { force: true, recursive: true });
+  }
 });
 
 test("managed check enforces briefing slide chrome", async () => {

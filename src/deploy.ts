@@ -5,6 +5,8 @@ import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
 
+import { projectFilename, readProject } from "./project.ts";
+
 const execFileAsync = promisify(execFile);
 
 type Account = {
@@ -146,7 +148,21 @@ export async function deployWorker(
     let assets = targetPath;
     await mkdir(cache);
 
-    if (!(await stat(targetPath)).isDirectory()) {
+    const targetStat = await stat(targetPath);
+    let singleFile = !targetStat.isDirectory();
+    if (targetStat.isDirectory()) {
+      try {
+        const project = await readProject(targetPath);
+        if (project.preset === "prototype-full" || project.preset === "dossier") {
+          throw new Error(`${projectFilename}: run pnpm build and deploy the dist directory`);
+        }
+        singleFile = true;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
+    }
+
+    if (singleFile) {
       assets = path.join(temporary, "site");
       await mkdir(assets);
       await copyFile(entry, path.join(assets, "index.html"));
