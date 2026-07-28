@@ -16,8 +16,7 @@ function parseConfig(raw: string, filename: string): BriefingConfig {
   };
 }
 
-function validateSlides(content: string, filename: string): void {
-  validateFragment(content, filename);
+export function validateSlideChrome(content: string, filename: string): void {
   const slides =
     content.match(/<section\b[^>]*\bclass=(["'])[^"']*\bslide\b[^"']*\1[^>]*>[\s\S]*?<\/section>/gi) ?? [];
   if (slides.length < 4) throw new Error(`${filename}: expected a cover and at least three content slides`);
@@ -32,6 +31,18 @@ function validateSlides(content: string, filename: string): void {
       throw new Error(`${filename}: slide ${index + 1} is missing .slide-num`);
     }
   }
+}
+
+export function checkBriefingOutput(html: string, filename: string): void {
+  validateSlideChrome(html, filename);
+  if (!/\bdata-deck-selector=(["'])\.slide\1/i.test(html)) {
+    throw new Error(`${filename}: missing data-deck-selector=".slide"`);
+  }
+}
+
+function validateSlides(content: string, filename: string): void {
+  validateFragment(content, filename);
+  validateSlideChrome(content, filename);
 }
 
 export async function createBriefing(project: string, output?: string): Promise<string> {

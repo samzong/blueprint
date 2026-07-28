@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rename, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -11,6 +11,7 @@ import { createBriefing } from "../src/presets/briefing.ts";
 import { createPitch } from "../src/presets/pitch.ts";
 import { createScaffold } from "../src/presets/scaffold.ts";
 import { language, validateFragment } from "../src/presets/shared.ts";
+import { recordProject } from "../src/project.ts";
 
 test("parses a safe local preview", () => {
   assert.deepEqual(
@@ -266,4 +267,90 @@ test("refuses to scaffold into a non-empty directory", async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-non-empty-"));
   await writeFile(path.join(directory, "keep.txt"), "keep");
   await assert.rejects(createScaffold("prototype-lite", directory), /output directory must be empty/);
+});
+
+test("managed check enforces pitch sections after the project is recorded", async () => {
+  const fixture = fileURLToPath(new URL("fixtures/pitch", import.meta.url));
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-check-pitch-"));
+  const entry = await createPitch(fixture, path.join(directory, "index.html"));
+  await recordProject(directory, "pitch", entry, "0.1.0");
+
+  assert.equal(await checkEntry(directory), entry);
+
+  let html = await readFile(entry, "utf8");
+  html = html.replace(/<section\b[^>]*\bid=(["'])cta\1[^>]*>[\s\S]*?<\/section>/i, "");
+  await writeFile(entry, html);
+  await assert.rejects(checkEntry(directory), /missing required section #cta/);
+});
+
+test("managed check enforces briefing slide chrome", async () => {
+  const fixture = fileURLToPath(new URL("fixtures/briefing", import.meta.url));
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-check-briefing-"));
+  const entry = await createBriefing(fixture, path.join(directory, "index.html"));
+  await recordProject(directory, "briefing", entry, "0.1.0");
+
+  let html = await readFile(entry, "utf8");
+  html = html.replace(/\bslide-num\b/g, "slide-number");
+  await writeFile(entry, html);
+  await assert.rejects(checkEntry(entry), /missing \.slide-num/);
+});
+
+test("managed check enforces archive shell and payload", async () => {
+  const fixture = fileURLToPath(new URL("fixtures/archive", import.meta.url));
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-check-archive-"));
+  const entry = await createArchive(fixture, path.join(directory, "index.html"));
+  await recordProject(directory, "archive", entry, "0.1.0");
+
+  assert.equal(await checkEntry(directory), entry);
+
+  let html = await readFile(entry, "utf8");
+  html = html.replace(/\bid=(["'])docs\1/i, 'id="document-list"');
+  await writeFile(entry, html);
+  await assert.rejects(checkEntry(directory), /missing #docs/);
+});
+
+test("unmanaged HTML keeps the shallow document checks only", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-check-shallow-"));
+  const entry = path.join(directory, "index.html");
+  await writeFile(
+    entry,
+    "<html><head></head><body><section id='hero'></section></body></html>",
+  );
+  assert.equal(await checkEntry(entry), entry);
+});
+
+test("managed check rejects unresolved scaffold tokens", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-check-scaffold-"));
+  const entry = await createScaffold("prototype-lite", directory);
+  await recordProject(directory, "prototype-lite", entry, "0.1.0");
+  assert.equal(await checkEntry(directory), entry);
+
+  await writeFile(entry, (await readFile(entry, "utf8")).replace("ReactDOM.createRoot", "/* removed */"));
+  await assert.rejects(checkEntry(directory), /missing ReactDOM\.createRoot bootstrap/);
+});
+
+test("check validates the requested path even inside a managed project", async () => {
+  const fixture = fileURLToPath(new URL("fixtures/pitch", import.meta.url));
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-check-target-"));
+  const entry = await createPitch(fixture, path.join(directory, "index.html"));
+  await recordProject(directory, "pitch", entry, "0.1.0");
+
+  const broken = path.join(directory, "broken.html");
+  await writeFile(broken, "<html><head></head>NO BODY TAG {{unresolved}}");
+  await assert.rejects(checkEntry(broken), /missing <body>/);
+  assert.equal(await checkEntry(entry), entry);
+
+  const sibling = path.join(directory, "sibling.html");
+  await writeFile(sibling, "<html><head></head><body><section id='hero'></section></body></html>");
+  assert.equal(await checkEntry(sibling), sibling);
+});
+
+test("managed dossier check does not require src/App.tsx", async () => {
+  const parent = await mkdtemp(path.join(os.tmpdir(), "blueprint-check-dossier-"));
+  const directory = path.join(parent, "report");
+  const entry = await createScaffold("dossier", directory);
+  await recordProject(directory, "dossier", entry, "0.1.0");
+
+  await rename(path.join(directory, "src", "App.tsx"), path.join(directory, "src", "Report.tsx"));
+  assert.equal(await checkEntry(directory), entry);
 });
