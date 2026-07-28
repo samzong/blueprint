@@ -23,6 +23,20 @@ test("parses a safe local preview", () => {
   );
 });
 
+test("parses an explicit Worker deployment", () => {
+  assert.deepEqual(
+    parseArgs(["deploy", "dist", "--name", "blueprint-demo", "--account", "personal"]),
+    {
+      account: "personal",
+      command: "deploy",
+      name: "blueprint-demo",
+      port: 4175,
+      target: "dist",
+    },
+  );
+  assert.throws(() => parseArgs(["deploy", "dist"]), /--name is required/);
+});
+
 test("keeps dot-prefixed paths inside the preview root", () => {
   const root = path.resolve("blueprint-preview");
 

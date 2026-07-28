@@ -1,7 +1,7 @@
 {
   "name": "@samzong/blueprint",
   "version": "0.1.0",
-  "description": "Deterministic web scaffolding and local preview for the blueprint agent skill.",
+  "description": "Deterministic web scaffolding, preview, and deployment for the blueprint agent skill.",
   "license": "MIT",
   "type": "module",
   "bin": {

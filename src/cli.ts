@@ -14,13 +14,16 @@ import {
   type InstallFlagValues,
 } from "@kitup/sdk";
 
+import { deployWorker } from "./deploy.ts";
 import { createBriefing } from "./presets/briefing.ts";
 import { createPitch } from "./presets/pitch.ts";
 import { createScaffold } from "./presets/scaffold.ts";
 
 export type ParsedArgs = {
+  account?: string;
   command?: string;
   installFlags?: InstallFlagValues;
+  name?: string;
   output?: string;
   port: number;
   preset?: string;
@@ -36,6 +39,7 @@ const usage = `Usage:
   blueprint create dossier <empty-directory>
   blueprint check [index.html-or-directory]
   blueprint preview [index.html-or-directory] [--root path] [--port 4175]
+  blueprint deploy <index.html-or-directory> --name worker-name [--account name-or-id]
   blueprint skill install [--scope user|project] [--agent id] [--dry-run] [--yes] [--force]
   blueprint --version`;
 
@@ -43,8 +47,10 @@ export function parseArgs(argv: string[]): ParsedArgs {
   const [command, ...rest] = argv;
   const positionals: string[] = [];
   const agents: string[] = [];
+  let account: string | undefined;
   let dryRun = false;
   let force = false;
+  let name: string | undefined;
   let output: string | undefined;
   let root: string | undefined;
   let scope: string | undefined;
@@ -73,6 +79,18 @@ export function parseArgs(argv: string[]): ParsedArgs {
       if (!Number.isInteger(port) || port < 1 || port > 65535) {
         throw new Error("--port must be an integer between 1 and 65535");
       }
+      continue;
+    }
+
+    if (value === "--name" && command === "deploy") {
+      name = rest[++index];
+      if (!name || name.startsWith("-")) throw new Error("--name requires a Worker name");
+      continue;
+    }
+
+    if (value === "--account" && command === "deploy") {
+      account = rest[++index];
+      if (!account || account.startsWith("-")) throw new Error("--account requires a name or id");
       continue;
     }
 
@@ -129,6 +147,18 @@ export function parseArgs(argv: string[]): ParsedArgs {
       installFlags: { agents, dryRun, force, scope, scopeSet, yes },
       port,
       target: ".",
+    };
+  }
+
+  if (command === "deploy") {
+    if (positionals.length > 1) throw new Error("expected at most one target path");
+    if (!name) throw new Error("--name is required");
+    return {
+      account,
+      command,
+      name,
+      port,
+      target: positionals[0] ?? ".",
     };
   }
 
@@ -280,6 +310,16 @@ export async function main(argv: string[]): Promise<number> {
   if (args.command === "check") {
     const entry = await checkEntry(args.target);
     process.stdout.write(`OK ${entry}\n`);
+    return 0;
+  }
+
+  if (args.command === "deploy" && args.name) {
+    const entry = await checkEntry(args.target);
+    const result = await deployWorker(args.target, entry, {
+      account: args.account,
+      name: args.name,
+    });
+    process.stdout.write(`Published ${result.url}\n`);
     return 0;
   }
 

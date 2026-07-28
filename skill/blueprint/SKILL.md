@@ -70,6 +70,22 @@ description: >
    - 启动命令（`blueprint preview <output>/index.html` 或 `pnpm install && pnpm dev`）
    - 下一步建议（写主题内容、替换占位）
 
+## 发布
+
+不要自动发布。只有用户检查预览后明确要求发布，才使用 Cloudflare Workers Static Assets：
+
+- `pitch` / `briefing` / `prototype-lite`：`blueprint deploy <output>/index.html --name <worker-name>`
+- `prototype-full` / `dossier`：先在项目内执行 `pnpm install && pnpm build`，再执行 `blueprint deploy <output>/dist --name <worker-name>`
+
+不要询问 `worker-name`。根据发布文件所在位置自动生成：
+
+- 位于 Git 仓库内：`<repo-name>-<task-name>`
+- 不在 Git 仓库内：`<task-name>`
+
+`repo-name` 取最近 Git 根目录的目录名；`task-name` 根据当前任务或输出用途生成简短稳定的 slug。整体转为小写，把非字母数字字符压成 `-`，去掉首尾 `-`，并确保不超过 63 个字符。用户明确指定完整名称时以用户输入为准。
+
+默认不传 `--account`。CLI 会自动使用唯一账户或 `CLOUDFLARE_ACCOUNT_ID`；只有多账户且没有可验证的默认值，也无法从当前仓库和任务上下文安全判断时，才询问用户并追加 `--account <name-or-id>`。发布完成后把 `Published` URL 返回给用户。
+
 **不要**：
 - 不要自动 `git init` / `pnpm install` / 起 dev server —— 让用户自己来
 - 不要生成 README 之外的额外 docs（如 ARCHITECTURE.md、CONTRIBUTING.md）
