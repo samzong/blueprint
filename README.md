@@ -61,7 +61,7 @@ pnpm check
 npm pack
 ```
 
-`npm pack` builds the compiled CLI, runtime assets, templates, and bundled Agent Skill. The package is the intended input for a future `samzong/homebrew-tap` formula; Wrangler remains an optional deployment dependency.
+`npm pack` builds the GitHub Release artifact.
 
 ## Acknowledgements
 
