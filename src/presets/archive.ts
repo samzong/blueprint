@@ -76,6 +76,21 @@ function scriptJson(value: unknown): string {
   return JSON.stringify(value).replaceAll("<", "\\u003c").replaceAll("\u2028", "\\u2028").replaceAll("\u2029", "\\u2029");
 }
 
+const archiveRequiredIds = ["docs", "content", "meta", "filter", "download", "doc-count"] as const;
+
+export function checkArchiveOutput(html: string, filename: string): void {
+  if (!/\bconst\s+ARCHIVE\s*=/.test(html)) {
+    throw new Error(`${filename}: missing ARCHIVE payload`);
+  }
+  if (!/"documents"\s*:\s*\[\s*\{/.test(html)) {
+    throw new Error(`${filename}: ARCHIVE documents must be a non-empty array`);
+  }
+  for (const id of archiveRequiredIds) {
+    const marker = new RegExp(`\\bid=(["'])${id}\\1`, "i");
+    if (!marker.test(html)) throw new Error(`${filename}: missing #${id}`);
+  }
+}
+
 export async function createArchive(project: string, output?: string): Promise<string> {
   const projectDirectory = path.resolve(project);
   const sourceDirectory = path.join(projectDirectory, "src");

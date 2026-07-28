@@ -167,7 +167,9 @@ export async function recordProject(
   return manifest;
 }
 
-export async function findProject(target: string): Promise<{ manifest: ProjectManifest; root: string }> {
+export async function findProjectOrNull(
+  target: string,
+): Promise<{ manifest: ProjectManifest; root: string } | null> {
   const resolved = path.resolve(target);
   let directory = (await stat(resolved)).isDirectory() ? resolved : path.dirname(resolved);
 
@@ -182,7 +184,13 @@ export async function findProject(target: string): Promise<{ manifest: ProjectMa
     directory = parent;
   }
 
-  throw new Error(`${projectFilename} not found for ${resolved}`);
+  return null;
+}
+
+export async function findProject(target: string): Promise<{ manifest: ProjectManifest; root: string }> {
+  const project = await findProjectOrNull(target);
+  if (!project) throw new Error(`${projectFilename} not found for ${path.resolve(target)}`);
+  return project;
 }
 
 export async function recordDeployment(projectRoot: string, deployment: ProjectDeployment): Promise<void> {

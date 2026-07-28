@@ -15,12 +15,13 @@ import {
 } from "@kitup/sdk";
 
 import { deployWorker } from "./deploy.ts";
-import { createArchive } from "./presets/archive.ts";
-import { createBriefing } from "./presets/briefing.ts";
-import { createPitch } from "./presets/pitch.ts";
-import { createScaffold } from "./presets/scaffold.ts";
+import { checkArchiveOutput, createArchive } from "./presets/archive.ts";
+import { checkBriefingOutput, createBriefing } from "./presets/briefing.ts";
+import { checkPitchOutput, createPitch } from "./presets/pitch.ts";
+import { checkScaffoldOutput, createScaffold } from "./presets/scaffold.ts";
 import {
   findProject,
+  findProjectOrNull,
   listProjects,
   recordDeployment,
   recordProject,
@@ -271,9 +272,7 @@ export async function resolveEntry(target: string): Promise<string> {
   return targetStat.isDirectory() ? path.join(absoluteTarget, "index.html") : absoluteTarget;
 }
 
-export async function checkEntry(target: string): Promise<string> {
-  const entry = await resolveEntry(target);
-  const html = await readFile(entry, "utf8");
+function checkDocumentBasics(entry: string, html: string): void {
   const errors = [
     !/<html(?:\s|>)/i.test(html) && "missing <html>",
     !/<head(?:\s|>)/i.test(html) && "missing <head>",
@@ -283,6 +282,48 @@ export async function checkEntry(target: string): Promise<string> {
   ].filter(Boolean);
 
   if (errors.length > 0) throw new Error(`${entry}: ${errors.join(", ")}`);
+}
+
+async function checkPresetOutput(
+  preset: ProjectPreset,
+  entry: string,
+  html: string,
+  projectRoot: string,
+): Promise<void> {
+  switch (preset) {
+    case "pitch":
+      checkPitchOutput(html, entry);
+      return;
+    case "briefing":
+      checkBriefingOutput(html, entry);
+      return;
+    case "archive":
+      checkArchiveOutput(html, entry);
+      return;
+    case "prototype-lite":
+    case "prototype-full":
+    case "dossier":
+      await checkScaffoldOutput(html, entry, preset, projectRoot);
+      return;
+  }
+}
+
+async function checkCreatedEntry(entry: string, preset: ProjectPreset, projectRoot: string): Promise<void> {
+  const html = await readFile(entry, "utf8");
+  checkDocumentBasics(entry, html);
+  await checkPresetOutput(preset, entry, html, projectRoot);
+}
+
+export async function checkEntry(target: string): Promise<string> {
+  const entry = await resolveEntry(target);
+  const html = await readFile(entry, "utf8");
+  checkDocumentBasics(entry, html);
+
+  const project = await findProjectOrNull(entry);
+  if (project && path.resolve(project.root, project.manifest.entry) === entry) {
+    await checkPresetOutput(project.manifest.preset, entry, html, project.root);
+  }
+
   return entry;
 }
 
@@ -462,7 +503,7 @@ export async function main(argv: string[]): Promise<number> {
       throw new Error("unknown preset");
     }
 
-    await checkEntry(entry);
+    await checkCreatedEntry(entry, preset, path.resolve(args.target));
     await recordProject(args.target, preset, entry, await packageVersion());
     process.stdout.write(`Created ${entry}\nPreview with: blueprint preview ${JSON.stringify(entry)}\n`);
     return 0;

@@ -12,7 +12,7 @@ type PitchConfig = {
   title: string;
 };
 
-const requiredSections = ["hero", "solution", "cta"];
+export const pitchRequiredSections = ["hero", "solution", "cta"] as const;
 
 function optionalHttpUrl(config: Record<string, unknown>, field: string, filename: string): string | undefined {
   const value = config[field];
@@ -41,12 +41,23 @@ function parseConfig(raw: string, filename: string): PitchConfig {
   };
 }
 
-function validateContent(content: string, filename: string): void {
-  validateFragment(content, filename);
-  for (const id of requiredSections) {
+export function validatePitchSections(content: string, filename: string): void {
+  for (const id of pitchRequiredSections) {
     const section = new RegExp(`<section\\b[^>]*\\bid=(["'])${id}\\1`, "i");
     if (!section.test(content)) throw new Error(`${filename}: missing required section #${id}`);
   }
+}
+
+export function checkPitchOutput(html: string, filename: string): void {
+  validatePitchSections(html, filename);
+  if (!/\bdata-deck-selector=(["'])section\1/i.test(html)) {
+    throw new Error(`${filename}: missing data-deck-selector="section"`);
+  }
+}
+
+function validateContent(content: string, filename: string): void {
+  validateFragment(content, filename);
+  validatePitchSections(content, filename);
 }
 
 export async function createPitch(project: string, output?: string): Promise<string> {
