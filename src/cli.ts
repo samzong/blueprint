@@ -18,6 +18,7 @@ import { checkArchiveOutput, createArchive } from "./presets/archive.ts";
 import { checkBriefingOutput, createBriefing } from "./presets/briefing.ts";
 import { checkPitchOutput, createPitch } from "./presets/pitch.ts";
 import { checkScaffoldOutput, createScaffold } from "./presets/scaffold.ts";
+import { urlAttributes } from "./presets/shared.ts";
 import {
   findProject,
   findProjectOrNull,
@@ -291,9 +292,7 @@ function checkDocumentBasics(entry: string, html: string): void {
     if ("tagName" in node) {
       for (const attribute of node.attrs) {
         if (
-          ["href", "src", "xlink:href", "action", "formaction", "poster", "data", "cite"].includes(
-            attribute.name,
-          ) &&
+          urlAttributes.includes(attribute.name) &&
           URL.canParse(attribute.value, "https://blueprint.invalid") &&
           new URL(attribute.value, "https://blueprint.invalid").protocol === "file:"
         ) {

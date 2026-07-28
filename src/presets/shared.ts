@@ -2,12 +2,16 @@ import { readFile } from "node:fs/promises";
 
 import { parseFragment, type DefaultTreeAdapterMap } from "parse5";
 
+// Attributes that carry a URL, and so must be protocol-checked wherever markup is validated.
+export const urlAttributes = ["href", "src", "xlink:href", "action", "formaction", "poster", "data", "cite"];
+
 export function escapeHtml(value: string): string {
   return value
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
 export function parseObject(raw: string, filename: string): Record<string, unknown> {
@@ -50,6 +54,14 @@ export function validateFragment(content: string, filename: string): void {
     if (node.tagName === "script" || node.tagName === "style") {
       throw new Error(`${filename}: unsafe <script> or <style> element`);
     }
+    if (
+      node.tagName === "meta" &&
+      node.attrs.some(
+        (attribute) => attribute.name === "http-equiv" && attribute.value.trim().toLowerCase() === "refresh",
+      )
+    ) {
+      throw new Error(`${filename}: unsafe <meta http-equiv="refresh"> element`);
+    }
     for (const attribute of node.attrs) {
       if (attribute.name.startsWith("on")) {
         throw new Error(`${filename}: unsafe event handler attribute ${attribute.name}`);
@@ -57,7 +69,7 @@ export function validateFragment(content: string, filename: string): void {
       if (attribute.name === "srcdoc") {
         throw new Error(`${filename}: unsafe srcdoc attribute`);
       }
-      if (!["href", "src", "xlink:href", "action", "formaction"].includes(attribute.name)) continue;
+      if (!urlAttributes.includes(attribute.name)) continue;
 
       if (!URL.canParse(attribute.value, "https://blueprint.invalid")) {
         throw new Error(`${filename}: unsafe URL in ${attribute.name}`);
@@ -66,7 +78,8 @@ export function validateFragment(content: string, filename: string): void {
       // parse5 reports SVG `xlink:href` as name "href" with prefix "xlink".
       const imageSource =
         (attribute.name === "src" && (node.tagName === "img" || node.tagName === "source")) ||
-        (attribute.name === "href" && node.tagName === "image");
+        (attribute.name === "href" && node.tagName === "image") ||
+        (attribute.name === "poster" && node.tagName === "video");
       const dataImage = protocol === "data:" && imageSource && /^data:image\//i.test(attribute.value.trim());
       if (["javascript:", "vbscript:", "file:", "data:"].includes(protocol) && !dataImage) {
         throw new Error(`${filename}: unsafe URL in ${attribute.name}`);

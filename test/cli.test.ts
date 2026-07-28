@@ -131,6 +131,26 @@ test("rejects executable fragment markup", () => {
     () => validateFragment('<svg><image href="data:text/html,hello"></image></svg>', "fragment.html"),
     /fragment\.html: unsafe URL in href/,
   );
+  for (const carrier of [
+    '<object data="javascript:alert(1)"></object>',
+    '<object data="data:text/html,hello"></object>',
+    '<video poster="javascript:alert(1)"></video>',
+    '<blockquote cite="javascript:alert(1)">quote</blockquote>',
+  ]) {
+    assert.throws(() => validateFragment(carrier, "fragment.html"), /unsafe URL/);
+  }
+  assert.doesNotThrow(() =>
+    validateFragment('<video poster="data:image/png;base64,iVBORw0KGgo="></video>', "fragment.html"),
+  );
+  assert.throws(
+    () => validateFragment('<meta http-equiv="refresh" content="0;url=https://evil.example">', "fragment.html"),
+    /unsafe <meta http-equiv="refresh"> element/,
+  );
+  assert.doesNotThrow(() => validateFragment('<meta name="description" content="hello">', "fragment.html"));
+  assert.throws(
+    () => validateFragment('<div xlink:href="javascript:alert(1)">x</div>', "fragment.html"),
+    /unsafe URL in xlink:href/,
+  );
 });
 
 test("rejects file URLs in generated HTML", async () => {
