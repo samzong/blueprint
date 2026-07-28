@@ -31,7 +31,7 @@ jobs:
 
       - name: Smoke test
         run: |
-          npm install --global --prefix "$RUNNER_TEMP/blueprint" release/*.tgz
+          npm install --global --prefix "$RUNNER_TEMP/blueprint" ./release/*.tgz
           "$RUNNER_TEMP/blueprint/bin/blueprint" --version
 
       - name: Publish release
