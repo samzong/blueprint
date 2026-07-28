@@ -1,15 +1,36 @@
+/**
+ * @param {string} id
+ * @returns {HTMLElement}
+ */
+function requireElement(id) {
+  const element = document.getElementById(id);
+  if (!element) throw new Error(`archive: missing #${id}`);
+  return element;
+}
+
+/**
+ * @param {string} id
+ * @returns {HTMLInputElement}
+ */
+function requireInput(id) {
+  const element = document.getElementById(id);
+  if (!(element instanceof HTMLInputElement)) throw new Error(`archive: missing #${id}`);
+  return element;
+}
+
 const documents = ARCHIVE.documents;
 const documentsByPath = new Map(
   documents.map((archiveDocument) => [archiveDocument.path, archiveDocument]),
 );
-const docsEl = document.getElementById("docs");
-const contentEl = document.getElementById("content");
-const metaEl = document.getElementById("meta");
-const filterEl = document.getElementById("filter");
-const countEl = document.getElementById("doc-count");
-const downloadEl = document.getElementById("download");
+const docsEl = requireElement("docs");
+const contentEl = requireElement("content");
+const metaEl = requireElement("meta");
+const filterEl = requireInput("filter");
+const countEl = requireElement("doc-count");
+const downloadEl = requireElement("download");
 const crcTable = new Uint32Array(256);
 let activePath = docPathFromLocation();
+/** @type {MermaidModule | null} */
 let mermaidModule = null;
 
 for (let n = 0; n < crcTable.length; n += 1) {
@@ -20,11 +41,19 @@ for (let n = 0; n < crcTable.length; n += 1) {
   crcTable[n] = c >>> 0;
 }
 
+/**
+ * @param {string} documentPath
+ * @returns {string}
+ */
 function slugFromDocPath(documentPath) {
   if (documentPath === "README.md") return "";
   return documentPath.replace(/\/README\.md$/i, "").replace(/\.md$/i, "");
 }
 
+/**
+ * @param {string} slug
+ * @returns {string}
+ */
 function docPathFromSlug(slug) {
   const normalized = slug.replace(/^\/+|\/+$/g, "").replace(/\.md$/i, "");
   if (!normalized) return documents[0].path;
@@ -34,6 +63,9 @@ function docPathFromSlug(slug) {
   return documentsByPath.has(readme) ? readme : "";
 }
 
+/**
+ * @returns {string}
+ */
 function docPathFromLocation() {
   try {
     const slug = decodeURIComponent(location.hash.replace(/^#\/?/, ""));
@@ -43,6 +75,10 @@ function docPathFromLocation() {
   }
 }
 
+/**
+ * @param {string} documentPath
+ * @param {boolean} replace
+ */
 function updateLocation(documentPath, replace) {
   const slug = slugFromDocPath(documentPath);
   const next = slug ? `#/${encodeURIComponent(slug).replaceAll("%2F", "/")}` : "#/";
@@ -50,6 +86,10 @@ function updateLocation(documentPath, replace) {
   history[replace ? "replaceState" : "pushState"]({}, "", next);
 }
 
+/**
+ * @param {string} value
+ * @returns {string}
+ */
 function escapeHtml(value) {
   return value
     .replaceAll("&", "&amp;")
@@ -58,6 +98,10 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
+/**
+ * @param {Uint8Array} bytes
+ * @returns {number}
+ */
 function crc32(bytes) {
   let crc = 0xffffffff;
   for (const byte of bytes) {
@@ -66,14 +110,28 @@ function crc32(bytes) {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
+/**
+ * @param {DataView} view
+ * @param {number} offset
+ * @param {number} value
+ */
 function writeUint16(view, offset, value) {
   view.setUint16(offset, value, true);
 }
 
+/**
+ * @param {DataView} view
+ * @param {number} offset
+ * @param {number} value
+ */
 function writeUint32(view, offset, value) {
   view.setUint32(offset, value, true);
 }
 
+/**
+ * @param {{ content: string; name: string }[]} files
+ * @returns {Blob}
+ */
 function makeZip(files) {
   const encoder = new TextEncoder();
   const localParts = [];
@@ -165,23 +223,43 @@ function downloadAllDocs() {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+/**
+ * @param {string} _match
+ * @param {string} label
+ * @param {string} href
+ * @returns {string}
+ */
+function markdownLink(_match, label, href) {
+  const internalPath = docPathFromSlug(href);
+  if (internalPath) return `<a href="#/${slugFromDocPath(internalPath)}">${label}</a>`;
+  if (!/^(https?:|mailto:|#)/i.test(href)) return label;
+  return `<a href="${escapeHtml(href)}" target="_blank" rel="noreferrer">${label}</a>`;
+}
+
+/**
+ * @param {string} value
+ * @returns {string}
+ */
 function inlineMarkdown(value) {
   let html = escapeHtml(value);
   html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
   html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, label, href) => {
-    const internalPath = docPathFromSlug(href);
-    if (internalPath) return `<a href="#/${slugFromDocPath(internalPath)}">${label}</a>`;
-    if (!/^(https?:|mailto:|#)/i.test(href)) return label;
-    return `<a href="${escapeHtml(href)}" target="_blank" rel="noreferrer">${label}</a>`;
-  });
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, markdownLink);
   return html;
 }
 
+/**
+ * @param {string} line
+ * @returns {boolean}
+ */
 function isTableSeparator(line) {
   return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);
 }
 
+/**
+ * @param {string} line
+ * @returns {string[]}
+ */
 function splitTableRow(line) {
   return line
     .trim()
@@ -191,9 +269,14 @@ function splitTableRow(line) {
     .map((cell) => cell.trim());
 }
 
+/**
+ * @param {string} markdown
+ * @returns {string}
+ */
 function markdownToHtml(markdown) {
   const lines = markdown.replace(/\r\n/g, "\n").split("\n");
   const html = [];
+  /** @type {"ul" | "ol" | null} */
   let list = null;
   const flushList = () => {
     if (!list) return;
@@ -363,6 +446,10 @@ function renderNav() {
   }
 }
 
+/**
+ * @param {string} documentPath
+ * @param {boolean} replaceUrl
+ */
 async function loadDoc(documentPath, replaceUrl) {
   const archiveDocument = documentsByPath.get(documentPath) ?? documents[0];
   activePath = archiveDocument.path;

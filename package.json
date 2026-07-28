@@ -16,7 +16,7 @@
     "build": "node scripts/build.mjs",
     "check": "pnpm typecheck && pnpm build && node --test test/*.test.ts",
     "prepack": "node scripts/build.mjs",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.runtime.json",
     "test": "node --test test/*.test.ts"
   },
   "engines": {

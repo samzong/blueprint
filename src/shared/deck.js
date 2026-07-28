@@ -1,14 +1,56 @@
 (function () {
+  /**
+   * @param {ParentNode} scope
+   * @param {string} selector
+   * @returns {HTMLElement}
+   */
+  const requireElement = (scope, selector) => {
+    const found = scope.querySelector(selector);
+    if (!(found instanceof HTMLElement)) throw new Error(`deck: missing ${selector}`);
+    return found;
+  };
+
+  /**
+   * Namespace-agnostic lookup: `<svg>` is an SVGElement, not an HTMLElement.
+   * @param {ParentNode} scope
+   * @param {string} selector
+   * @returns {Element}
+   */
+  const requireNode = (scope, selector) => {
+    const found = scope.querySelector(selector);
+    if (!found) throw new Error(`deck: missing ${selector}`);
+    return found;
+  };
+
+  /**
+   * @param {ParentNode} scope
+   * @param {string} selector
+   * @returns {HTMLButtonElement}
+   */
+  const requireButton = (scope, selector) => {
+    const found = scope.querySelector(selector);
+    if (!(found instanceof HTMLButtonElement)) throw new Error(`deck: missing ${selector}`);
+    return found;
+  };
+
+  /**
+   * @param {Element | null} element
+   * @returns {string}
+   */
+  const collapsedText = (element) => (element?.textContent ?? "").replace(/\s+/g, " ").trim();
+
   const root = document.documentElement;
   const selector = root.dataset.deckSelector || "section";
   const offsetSelector = root.dataset.deckOffset;
   const progressHostSelector = root.dataset.deckProgressHost;
   const nextLabel = root.dataset.deckNextLabel || "Next";
-  const slides = () => Array.from(document.querySelectorAll(selector));
+  const slides = () =>
+    Array.from(document.querySelectorAll(selector)).filter((element) => element instanceof HTMLElement);
   const currentIndex = () => {
     const list = slides();
     if (!list.length) return 0;
-    const offset = offsetSelector ? document.querySelector(offsetSelector)?.offsetHeight || 0 : 0;
+    const offsetHost = offsetSelector ? document.querySelector(offsetSelector) : null;
+    const offset = offsetHost instanceof HTMLElement ? offsetHost.offsetHeight : 0;
     const scrollPadding = Number.parseFloat(getComputedStyle(root).scrollPaddingTop) || 0;
     const y = window.scrollY + Math.max(offset, scrollPadding) + 1;
     let index = 0;
@@ -18,6 +60,7 @@
     }
     return index;
   };
+  /** @param {number} index */
   const goTo = (index) => {
     const list = slides();
     if (!list.length) return;
@@ -25,24 +68,30 @@
     const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
     list[next].scrollIntoView({ behavior, block: "start" });
   };
+  /** @param {number} delta */
   const go = (delta) => goTo(currentIndex() + delta);
+  /**
+   * @param {HTMLElement} element
+   * @param {number} index
+   * @returns {string}
+   */
   const slideTitle = (element, index) => {
     const title = element.getAttribute("data-rail-title");
     if (title && title.trim()) return title.trim();
     const eyebrow = element.querySelector(".eyebrow");
     if (eyebrow) {
-      const copy = eyebrow.cloneNode(true);
+      const copy = /** @type {Element} */ (eyebrow.cloneNode(true));
       copy.querySelector(".num")?.remove();
-      const text = copy.textContent.replace(/\s+/g, " ").trim();
+      const text = collapsedText(copy);
       if (text) return text;
     }
     const tag = element.querySelector(".slide-tag, .meta-tag");
     if (tag) {
-      const text = tag.textContent.replace(/\s+/g, " ").trim();
+      const text = collapsedText(tag);
       if (text) return text;
     }
     const heading = element.querySelector("h2, h1");
-    if (heading) return heading.textContent.replace(/\s+/g, " ").trim();
+    if (heading) return collapsedText(heading);
     return element.id || `Section ${index + 1}`;
   };
 
@@ -90,20 +139,20 @@
   const progressHost = progressHostSelector ? document.querySelector(progressHostSelector) : document.body;
   (progressHost || document.body).appendChild(autoplayProgress);
 
-  const track = rail.querySelector("[data-rail-track]");
-  const topButton = rail.querySelector('[data-rail="top"]');
-  const lastButton = rail.querySelector('[data-rail="last"]');
-  const fullscreenButton = rail.querySelector('[data-rail="fs"]');
-  const autoplayButton = rail.querySelector('[data-rail="autoplay"]');
-  const mobileCount = mobileNav.querySelector(".mobile-deck-count");
-  const mobileTitle = mobileNav.querySelector(".mobile-deck-title");
-  const mobileNextButton = mobileNav.querySelector(".mobile-deck-next");
+  const track = requireElement(rail, "[data-rail-track]");
+  const topButton = requireButton(rail, '[data-rail="top"]');
+  const lastButton = requireButton(rail, '[data-rail="last"]');
+  const fullscreenButton = requireButton(rail, '[data-rail="fs"]');
+  const autoplayButton = requireButton(rail, '[data-rail="autoplay"]');
+  const mobileCount = requireElement(mobileNav, ".mobile-deck-count");
+  const mobileTitle = requireElement(mobileNav, ".mobile-deck-title");
+  const mobileNextButton = requireButton(mobileNav, ".mobile-deck-next");
 
   const syncAutoplayButton = () => {
     autoplayButton.setAttribute("aria-label", autoplayRunning ? "Pause autoplay" : "Autoplay");
     autoplayButton.setAttribute("aria-pressed", String(autoplayRunning));
-    autoplayButton.querySelector(".deck-rail-tip").textContent = autoplayRunning ? "Pause" : "Autoplay";
-    autoplayButton.querySelector("svg").innerHTML = autoplayRunning ? iconPause : iconPlay;
+    requireElement(autoplayButton, ".deck-rail-tip").textContent = autoplayRunning ? "Pause" : "Autoplay";
+    requireNode(autoplayButton, "svg").innerHTML = autoplayRunning ? iconPause : iconPlay;
   };
   syncAutoplayButton();
 
@@ -112,7 +161,8 @@
   const tickLong = 28;
   const magnificationRadius = 36;
   let trackHot = false;
-  const tickButtons = () => Array.from(track.querySelectorAll(".deck-rail-tick"));
+  const tickButtons = () =>
+    Array.from(track.querySelectorAll(".deck-rail-tick")).filter((tick) => tick instanceof HTMLElement);
 
   const paintRestTicks = () => {
     const index = currentIndex();
@@ -126,6 +176,7 @@
     });
   };
 
+  /** @param {number} clientY */
   const magnifyTicks = (clientY) => {
     const list = tickButtons();
     let closest = 0;
@@ -152,6 +203,7 @@
 
   const syncMobileNav = () => {
     const list = slides();
+    if (!list.length) return;
     const index = currentIndex();
     const last = index >= list.length - 1;
     mobileCount.textContent = `${String(index + 1).padStart(2, "0")} / ${String(list.length).padStart(2, "0")}`;
@@ -195,8 +247,8 @@
   const syncFullscreen = () => {
     const active = Boolean(document.fullscreenElement);
     fullscreenButton.setAttribute("aria-label", active ? "Exit fullscreen" : "Fullscreen");
-    fullscreenButton.querySelector(".deck-rail-tip").textContent = active ? "Exit" : "Fullscreen";
-    fullscreenButton.querySelector("svg").innerHTML = active ? iconExitFullscreen : iconFullscreen;
+    requireElement(fullscreenButton, ".deck-rail-tip").textContent = active ? "Exit" : "Fullscreen";
+    requireNode(fullscreenButton, "svg").innerHTML = active ? iconExitFullscreen : iconFullscreen;
   };
 
   const toggleFullscreen = () => {
@@ -248,6 +300,7 @@
   let autoplayIndex = currentIndex();
   let elapsed = 0;
   let previous = performance.now();
+  /** @param {number} now */
   const tick = (now) => {
     const index = currentIndex();
     if (index !== autoplayIndex) {
@@ -282,8 +335,8 @@
   window.addEventListener("keydown", (event) => {
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
     const target = event.target;
-    const tag = target?.tagName || "";
-    if (/^(INPUT|TEXTAREA|SELECT)$/.test(tag) || target?.isContentEditable) return;
+    const tag = target instanceof Element ? target.tagName : "";
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(tag) || (target instanceof HTMLElement && target.isContentEditable)) return;
     if (event.key === "ArrowDown" || event.key === "PageDown") {
       event.preventDefault();
       go(1);
