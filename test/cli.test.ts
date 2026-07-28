@@ -5,7 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { checkEntry, entryUrl, parseArgs } from "../src/cli.ts";
+import { checkEntry, entryUrl, formatProjectList, parseArgs } from "../src/cli.ts";
 import { createBriefing } from "../src/presets/briefing.ts";
 import { createPitch } from "../src/presets/pitch.ts";
 import { createScaffold } from "../src/presets/scaffold.ts";
@@ -35,6 +35,44 @@ test("parses an explicit Worker deployment", () => {
     },
   );
   assert.throws(() => parseArgs(["deploy", "dist"]), /--name is required/);
+});
+
+test("parses project listing", () => {
+  assert.deepEqual(parseArgs(["list"]), {
+    command: "list",
+    json: false,
+    port: 4175,
+    root: undefined,
+    target: ".",
+  });
+  assert.deepEqual(parseArgs(["list", "--root", "projects", "--json"]), {
+    command: "list",
+    json: true,
+    port: 4175,
+    root: "projects",
+    target: ".",
+  });
+  assert.throws(() => parseArgs(["list", "all"]), /does not accept positional arguments/);
+});
+
+test("formats project lists without forcing long fields onto one line", () => {
+  assert.equal(
+    formatProjectList([
+      {
+        deployed: true,
+        entry: "index.html",
+        name: "tokener-demo-day",
+        path: "/Users/x/git/lg/ai-gateway/.local/tokener-demo-day-blueprint",
+        preset: "briefing",
+        projectId: "project-id",
+        url: "https://ai-gateway-tokener-demo-day.samzong.workers.dev",
+      },
+    ]),
+    "● tokener-demo-day  deployed\n" +
+      "  ├─ preset   briefing\n" +
+      "  ├─ local    /Users/x/git/lg/ai-gateway/.local/tokener-demo-day-blueprint\n" +
+      "  └─ remote   https://ai-gateway-tokener-demo-day.samzong.workers.dev\n",
+  );
 });
 
 test("keeps dot-prefixed paths inside the preview root", () => {

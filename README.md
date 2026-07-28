@@ -9,6 +9,7 @@ The project owns mechanical behavior:
 - output validation
 - local preview through `gofs`
 - Cloudflare Workers Static Assets deployment through Wrangler
+- project identity and local discovery
 
 The bundled skill owns semantic behavior:
 
@@ -18,7 +19,7 @@ The bundled skill owns semantic behavior:
 
 ## Current milestone
 
-This repository contains the blueprint skill migration baseline, executable shared assets, and working `create`, `check`, `preview`, and `deploy` commands. `pitch` and `briefing` compile semantic source files into portable single-file HTML. Prototype and dossier remain scaffold workflows.
+This repository contains the blueprint skill migration baseline, executable shared assets, and working `create`, `check`, `preview`, `deploy`, and `list` commands. `pitch` and `briefing` compile semantic source files into portable single-file HTML. Prototype and dossier remain scaffold workflows.
 
 ## Commands
 
@@ -38,18 +39,24 @@ blueprint preview <index.html-or-directory>
 blueprint preview <index.html> --root <asset-root> --port 4175
 blueprint deploy <index.html-or-directory> --name <worker-name>
 blueprint deploy <index.html-or-directory> --name <worker-name> --account <name-or-id>
+blueprint list
+blueprint list --root <path> --json
 blueprint skill install
 blueprint skill install --scope user --agent codex --yes
 ```
 
 Preview binds `gofs` to `127.0.0.1`, mounts the selected root read-only, and uses its default theme so single-file inline scripts remain executable.
 
-`deploy` validates the entry point, publishes it with Cloudflare Workers Static Assets, and returns only after the resulting URL responds successfully. A file target is staged alone as `index.html`; a directory target must be deploy-ready build output. `--account` is normally omitted: blueprint uses the only available account or `CLOUDFLARE_ACCOUNT_ID`, and requires an explicit account only when neither resolves a unique account. The bundled skill derives Worker names as `<repo-name>-<task-name>` inside a Git repository and `<task-name>` elsewhere. Install and authenticate Wrangler separately:
+Every successful `create` writes `.blueprint.json` at the project root. The file contains a stable project ID, name, preset, entry point, creating blueprint version, and the latest successful deployment target. Rebuilding a project preserves its ID and deployment.
+
+`deploy` requires that project marker, validates the entry point, publishes it with Cloudflare Workers Static Assets, verifies the resulting URL, and then records the deployment in `.blueprint.json`. A file target is staged alone as `index.html`; a directory target must be deploy-ready build output. `--account` is normally omitted: blueprint reuses the project's recorded account, `CLOUDFLARE_ACCOUNT_ID`, or the only available account, and requires an explicit account only when none resolves a unique account. The bundled skill derives Worker names as `<repo-name>-<task-name>` inside a Git repository and `<task-name>` elsewhere. Install and authenticate Wrangler separately:
 
 ```bash
 brew install cloudflare-wrangler
 wrangler login
 ```
+
+`list` discovers projects by their `.blueprint.json` marker. It scans the current directory by default, accepts `--root <path>`, and emits machine-readable records with `--json`.
 
 `skill install` uses `@kitup/sdk` to detect supported agent hosts, select user or project scope, install the bundled `skill/blueprint` tree, and protect unmanaged targets from accidental overwrite. It supports repeatable `--agent`, `--dry-run`, `--yes` / `-y`, and `--force`.
 
@@ -95,6 +102,7 @@ blueprint inlines preset tokens, shared deck styles, runtime, and optional custo
 src/
   cli.ts
   deploy.ts
+  project.ts
   presets/
     briefing.css
     briefing.ts

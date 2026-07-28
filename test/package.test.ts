@@ -42,6 +42,14 @@ test("installs a runnable package with every preset and the bundled skill", { ti
 
   assert.match(await readFile(path.join(scratch, "prototype-lite", "index.html"), "utf8"), /ReactDOM\.createRoot/);
 
+  const { stdout: listOutput } = await exec(executable, ["list", "--root", scratch, "--json"], { cwd: scratch });
+  const projects: Array<{ name: string; preset: string }> = JSON.parse(listOutput);
+  assert.equal(projects.length, 5);
+  assert.deepEqual(
+    projects.map((project) => project.preset).sort(),
+    ["briefing", "dossier", "pitch", "prototype-full", "prototype-lite"],
+  );
+
   const installHome = path.join(scratch, "home");
   const installEnv = { ...process.env, HOME: installHome };
   await exec(

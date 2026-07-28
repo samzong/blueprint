@@ -61,6 +61,7 @@ if (args[0] === "--version") {
     const { args } = deployment;
     const assets = args[args.indexOf("--assets") + 1];
 
+    assert.equal(result.account, "personal");
     assert.equal(result.url, "https://blueprint-demo.example");
     assert.equal(deployment.account, "account-id");
     assert.deepEqual(deployment.files, ["index.html"]);

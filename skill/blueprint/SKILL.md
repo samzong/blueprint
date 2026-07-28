@@ -65,7 +65,8 @@ description: >
 5. 在指定目录生成项目。**目录非空时停下问用户**，不要覆盖。
 6. `pitch` / `briefing` 只写 `src/` 语义源，再调用 `blueprint create <preset> <output>` 生成根目录 `index.html`，随后执行 `blueprint check <output>/index.html`。不要手写或复制 shared CSS/runtime。
 7. `prototype` / `dossier` 先调用对应的 `blueprint create prototype-lite|prototype-full|dossier <output>`，再按 preset 文档填充真实内容。不要手写工具链骨架。
-8. 完成后用一段简短 markdown 报告：
+8. `blueprint create` maintains `.blueprint.json` at the project root. Do not hand-write, delete, or copy that file to create a new project.
+9. Finish with a short markdown report:
    - 已生成的文件清单（树状）
    - 启动命令（`blueprint preview <output>/index.html` 或 `pnpm install && pnpm dev`）
    - 下一步建议（写主题内容、替换占位）
@@ -84,7 +85,15 @@ description: >
 
 `repo-name` 取最近 Git 根目录的目录名；`task-name` 根据当前任务或输出用途生成简短稳定的 slug。整体转为小写，把非字母数字字符压成 `-`，去掉首尾 `-`，并确保不超过 63 个字符。用户明确指定完整名称时以用户输入为准。
 
-默认不传 `--account`。CLI 会自动使用唯一账户或 `CLOUDFLARE_ACCOUNT_ID`；只有多账户且没有可验证的默认值，也无法从当前仓库和任务上下文安全判断时，才询问用户并追加 `--account <name-or-id>`。发布完成后把 `Published` URL 返回给用户。
+By default omit `--account`. The CLI reuses the project's recorded account, `CLOUDFLARE_ACCOUNT_ID`, or the only available account, in that order; only when none of those uniquely resolve an account, and the account also cannot be safely inferred from the current repo and task context, ask the user and append `--account <name-or-id>`. After a successful verified publish, the CLI writes the account, Worker name, and URL back to `.blueprint.json`. Return the `Published` URL to the user.
+
+## Project discovery
+
+- Current directory: `blueprint list`
+- Specific directory: `blueprint list --root <path>`
+- Machine-readable output: append `--json` to the commands above
+
+Project paths come from scan results; do not write absolute paths into `.blueprint.json`. `deployed` means blueprint recorded a successful, URL-verified publish; if the remote is deleted externally, the local record does not disappear automatically.
 
 **不要**：
 - 不要自动 `git init` / `pnpm install` / 起 dev server —— 让用户自己来

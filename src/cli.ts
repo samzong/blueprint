@@ -18,11 +18,19 @@ import { deployWorker } from "./deploy.ts";
 import { createBriefing } from "./presets/briefing.ts";
 import { createPitch } from "./presets/pitch.ts";
 import { createScaffold } from "./presets/scaffold.ts";
+import {
+  findProject,
+  listProjects,
+  recordDeployment,
+  recordProject,
+  type ProjectPreset,
+} from "./project.ts";
 
 export type ParsedArgs = {
   account?: string;
   command?: string;
   installFlags?: InstallFlagValues;
+  json?: boolean;
   name?: string;
   output?: string;
   port: number;
@@ -40,6 +48,7 @@ const usage = `Usage:
   blueprint check [index.html-or-directory]
   blueprint preview [index.html-or-directory] [--root path] [--port 4175]
   blueprint deploy <index.html-or-directory> --name worker-name [--account name-or-id]
+  blueprint list [--root path] [--json]
   blueprint skill install [--scope user|project] [--agent id] [--dry-run] [--yes] [--force]
   blueprint --version`;
 
@@ -50,6 +59,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
   let account: string | undefined;
   let dryRun = false;
   let force = false;
+  let json = false;
   let name: string | undefined;
   let output: string | undefined;
   let root: string | undefined;
@@ -67,9 +77,14 @@ export function parseArgs(argv: string[]): ParsedArgs {
       continue;
     }
 
-    if (value === "--root" && command === "preview") {
+    if (value === "--root" && (command === "preview" || command === "list")) {
       root = rest[++index];
-      if (!root) throw new Error("--root requires a path");
+      if (!root || root.startsWith("--")) throw new Error("--root requires a path");
+      continue;
+    }
+
+    if (value === "--json" && command === "list") {
+      json = true;
       continue;
     }
 
@@ -148,6 +163,11 @@ export function parseArgs(argv: string[]): ParsedArgs {
       port,
       target: ".",
     };
+  }
+
+  if (command === "list") {
+    if (positionals.length > 0) throw new Error("list does not accept positional arguments");
+    return { command, json, port, root, target: "." };
   }
 
   if (command === "deploy") {
@@ -245,20 +265,45 @@ export async function preview(target: string, rootOption: string | undefined, po
   });
 }
 
+async function packageVersion(): Promise<string> {
+  const metadata: unknown = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+  if (
+    typeof metadata !== "object" ||
+    metadata === null ||
+    !("version" in metadata) ||
+    typeof metadata.version !== "string"
+  ) {
+    throw new Error("package.json: missing version");
+  }
+  return metadata.version;
+}
+
+
+export function formatProjectList(
+  projects: Awaited<ReturnType<typeof listProjects>>,
+  color = false,
+): string {
+  const paint = (code: number, value: string) => (color ? `\u001b[${code}m${value}\u001b[0m` : value);
+  const label = (value: string) => paint(2, value.padEnd(8));
+  if (projects.length === 0) return `${paint(2, "No blueprint projects found")}\n`;
+
+  return `${projects
+    .map((project) => {
+      if (project.error) {
+        return `${paint(31, "×")} ${paint(1, "invalid")}  ${paint(31, "invalid")}\n  ├─ ${label("local")} ${project.path}\n  └─ ${label("error")} ${project.error}`;
+      }
+      const status = project.deployed ? "deployed" : "local";
+      const statusColor = project.deployed ? 32 : 33;
+      return `${paint(statusColor, project.deployed ? "●" : "○")} ${paint(1, project.name ?? "unnamed")}  ${paint(statusColor, status)}\n  ├─ ${label("preset")} ${project.preset}\n  ├─ ${label("local")} ${project.path}\n  └─ ${label("remote")} ${project.url ?? "-"}`;
+    })
+    .join("\n\n")}\n`;
+}
+
 export async function main(argv: string[]): Promise<number> {
   const args = parseArgs(argv);
 
   if (args.command === "--version" || args.command === "-v" || args.command === "version") {
-    const metadata: unknown = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
-    if (
-      typeof metadata !== "object" ||
-      metadata === null ||
-      !("version" in metadata) ||
-      typeof metadata.version !== "string"
-    ) {
-      throw new Error("package.json: missing version");
-    }
-    process.stdout.write(`blueprint ${metadata.version}\n`);
+    process.stdout.write(`blueprint ${await packageVersion()}\n`);
     return 0;
   }
 
@@ -287,22 +332,39 @@ export async function main(argv: string[]): Promise<number> {
     return 0;
   }
 
+  if (args.command === "list") {
+    const projects = await listProjects(args.root ?? ".");
+    if (args.json) {
+      process.stdout.write(`${JSON.stringify(projects, null, 2)}\n`);
+    } else {
+      process.stdout.write(formatProjectList(projects, Boolean(process.stdout.isTTY) && !("NO_COLOR" in process.env)));
+    }
+    return 0;
+  }
+
   if (args.command === "create") {
     let entry: string;
-    if (args.preset === "pitch") entry = await createPitch(args.target, args.output);
-    else if (args.preset === "briefing") entry = await createBriefing(args.target, args.output);
-    else if (
+    let preset: ProjectPreset;
+    if (args.preset === "pitch") {
+      preset = args.preset;
+      entry = await createPitch(args.target, args.output);
+    } else if (args.preset === "briefing") {
+      preset = args.preset;
+      entry = await createBriefing(args.target, args.output);
+    } else if (
       args.preset === "prototype-lite" ||
       args.preset === "prototype-full" ||
       args.preset === "dossier"
     ) {
       if (args.output) throw new Error("--output is only available for compiled presets");
-      entry = await createScaffold(args.preset, args.target);
+      preset = args.preset;
+      entry = await createScaffold(preset, args.target);
     } else {
       throw new Error("unknown preset");
     }
 
     await checkEntry(entry);
+    await recordProject(args.target, preset, entry, await packageVersion());
     process.stdout.write(`Created ${entry}\nPreview with: blueprint preview ${JSON.stringify(entry)}\n`);
     return 0;
   }
@@ -315,9 +377,16 @@ export async function main(argv: string[]): Promise<number> {
 
   if (args.command === "deploy" && args.name) {
     const entry = await checkEntry(args.target);
+    const project = await findProject(entry);
     const result = await deployWorker(args.target, entry, {
-      account: args.account,
+      account: args.account ?? project.manifest.deployment?.account,
       name: args.name,
+    });
+    await recordDeployment(project.root, {
+      account: result.account,
+      provider: "cloudflare-workers",
+      url: result.url,
+      workerName: args.name,
     });
     process.stdout.write(`Published ${result.url}\n`);
     return 0;

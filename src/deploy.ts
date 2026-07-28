@@ -118,7 +118,7 @@ export async function deployWorker(
   target: string,
   entry: string,
   options: { account?: string; name: string },
-): Promise<{ url: string }> {
+): Promise<{ account: string; url: string }> {
   let version: string;
   try {
     ({ stdout: version } = await execFileAsync("wrangler", ["--version"], { encoding: "utf8" }));
@@ -174,7 +174,7 @@ export async function deployWorker(
 
     const url = deploymentUrl(await readFile(output, "utf8"));
     await verifyDeployment(url);
-    return { url };
+    return { account: account.name, url };
   } finally {
     await rm(temporary, { force: true, recursive: true });
   }
