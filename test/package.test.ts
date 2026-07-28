@@ -10,10 +10,6 @@ import { promisify } from "node:util";
 const exec = promisify(execFile);
 const repository = fileURLToPath(new URL("..", import.meta.url));
 
-test("imports the CLI without a script argv entry", async () => {
-  await exec(process.execPath, ["--input-type=module", "--eval", "await import('./src/cli.ts')"], { cwd: repository });
-});
-
 test("installs a runnable package with every preset and the bundled skill", { timeout: 30_000 }, async () => {
   const scratch = await mkdtemp(path.join(os.tmpdir(), "blueprint-package-"));
   await exec("npm", ["pack", "--pack-destination", scratch], { cwd: repository });

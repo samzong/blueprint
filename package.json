@@ -12,7 +12,7 @@
     "skill"
   ],
   "scripts": {
-    "blueprint": "node src/cli.ts",
+    "blueprint": "node src/bin.ts",
     "build": "node scripts/build.mjs",
     "check": "pnpm typecheck && pnpm build && node --test test/*.test.ts",
     "prepack": "node scripts/build.mjs",

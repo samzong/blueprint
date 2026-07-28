@@ -12,6 +12,26 @@ import {
   recordProject,
 } from "../src/project.ts";
 
+test("lists projects nested under dot-prefixed directories", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-list-"));
+  const project = path.join(directory, ".local", "demo");
+  const entry = path.join(project, "index.html");
+  await mkdir(project, { recursive: true });
+  await writeFile(entry, "<html><head></head><body>demo</body></html>");
+  await mkdir(path.join(directory, "node_modules", "skipped"), { recursive: true });
+  await writeFile(path.join(directory, "node_modules", "skipped", ".blueprint.json"), "{}");
+
+  try {
+    await recordProject(project, "briefing", entry, "0.1.0");
+    assert.deepEqual(
+      (await listProjects(directory)).map((summary) => summary.path),
+      [project],
+    );
+  } finally {
+    await rm(directory, { force: true, recursive: true });
+  }
+});
+
 test("records project identity and its latest deployment", async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-project-"));
   const project = path.join(directory, "demo");
