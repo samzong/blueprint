@@ -1,0 +1,4 @@
+interface:
+  display_name: "blueprint"
+  short_description: "Create, preview, and deploy blueprint web projects"
+  default_prompt: "Use $blueprint to create and validate a web project from this brief."
