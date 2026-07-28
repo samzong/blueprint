@@ -23,6 +23,7 @@ import {
   findProject,
   findProjectOrNull,
   listProjects,
+  readCompatibleProject,
   recordDeployment,
   recordProject,
   type ProjectPreset,
@@ -269,7 +270,12 @@ export function parseArgs(argv: string[]): ParsedArgs {
 export async function resolveEntry(target: string): Promise<string> {
   const absoluteTarget = path.resolve(target);
   const targetStat = await stat(absoluteTarget);
-  return targetStat.isDirectory() ? path.join(absoluteTarget, "index.html") : absoluteTarget;
+  if (!targetStat.isDirectory()) return absoluteTarget;
+
+  const project = await findProjectOrNull(absoluteTarget);
+  return project?.root === absoluteTarget
+    ? path.resolve(project.root, project.manifest.entry)
+    : path.join(absoluteTarget, "index.html");
 }
 
 function checkDocumentBasics(entry: string, html: string): void {
@@ -315,11 +321,12 @@ async function checkCreatedEntry(entry: string, preset: ProjectPreset, projectRo
 }
 
 export async function checkEntry(target: string): Promise<string> {
+  const targetProject = await findProjectOrNull(target);
   const entry = await resolveEntry(target);
   const html = await readFile(entry, "utf8");
   checkDocumentBasics(entry, html);
 
-  const project = await findProjectOrNull(entry);
+  const project = targetProject ?? (await findProjectOrNull(entry));
   if (project && path.resolve(project.root, project.manifest.entry) === entry) {
     await checkPresetOutput(project.manifest.preset, entry, html, project.root);
   }
@@ -482,6 +489,16 @@ export async function main(argv: string[]): Promise<number> {
   if (args.command === "create") {
     let entry: string;
     let preset: ProjectPreset;
+    if (
+      args.preset === "pitch" ||
+      args.preset === "archive" ||
+      args.preset === "briefing" ||
+      args.preset === "prototype-lite" ||
+      args.preset === "prototype-full" ||
+      args.preset === "dossier"
+    ) {
+      await readCompatibleProject(args.target, args.preset);
+    }
     if (args.preset === "pitch") {
       preset = args.preset;
       entry = await createPitch(args.target, args.output);
@@ -517,7 +534,13 @@ export async function main(argv: string[]): Promise<number> {
 
   if (args.command === "deploy" && args.name) {
     const entry = await checkEntry(args.target);
-    const project = await findProject(entry);
+    const project = await findProject(args.target);
+    if (
+      (project.manifest.preset === "prototype-full" || project.manifest.preset === "dossier") &&
+      path.resolve(args.target) !== path.join(project.root, "dist")
+    ) {
+      throw new Error(`${project.manifest.preset}: run pnpm build and deploy ${path.join(project.root, "dist")}`);
+    }
     const result = await deployWorker(args.target, entry, {
       account: args.account ?? project.manifest.deployment?.account,
       name: args.name,

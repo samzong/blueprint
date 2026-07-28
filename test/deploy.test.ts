@@ -4,10 +4,13 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { checkEntry } from "../src/cli.ts";
+import { checkEntry, main } from "../src/cli.ts";
 import { deployWorker } from "../src/deploy.ts";
+import { createPitch } from "../src/presets/pitch.ts";
+import { createScaffold } from "../src/presets/scaffold.ts";
+import { recordProject } from "../src/project.ts";
 
-test("deploys one HTML file through Wrangler and verifies its URL", async () => {
+test("deploys only publishable assets through Wrangler and verifies its URL", async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-deploy-test-"));
   const bin = path.join(directory, "bin");
   const entry = path.join(directory, "page.html");
@@ -68,6 +71,37 @@ if (args[0] === "--version") {
     assert.deepEqual(args.slice(0, 5), ["deploy", "--assets", assets, "--name", "blueprint-demo"]);
     assert.ok(args.includes("--no-autoconfig"));
     assert.ok(args.includes("--strict"));
+
+    const project = path.join(directory, "managed");
+    const projectEntry = path.join(directory, "managed-output", "custom.html");
+    await mkdir(path.join(project, "src"), { recursive: true });
+    await createPitch(path.resolve("test/fixtures/pitch"), projectEntry);
+    await writeFile(path.join(project, "src", "source.txt"), "private source");
+    await recordProject(project, "pitch", projectEntry, "0.1.0");
+    assert.equal(await main(["deploy", project, "--name", "blueprint-demo"]), 0);
+    const managedDeployment: { files: string[] } = JSON.parse(await readFile(log, "utf8"));
+    assert.deepEqual(managedDeployment.files, ["index.html"]);
+
+    const app = path.join(directory, "app");
+    const appEntry = await createScaffold("dossier", app);
+    await recordProject(app, "dossier", appEntry, "0.1.0");
+    await assert.rejects(
+      main(["deploy", appEntry, "--name", "blueprint-demo"]),
+      /run pnpm build and deploy/,
+    );
+    await assert.rejects(
+      deployWorker(app, appEntry, { name: "blueprint-demo" }),
+      /run pnpm build and deploy the dist directory/,
+    );
+
+    const dist = path.join(app, "dist");
+    const distEntry = path.join(dist, "index.html");
+    await mkdir(dist);
+    await writeFile(distEntry, "<html><head></head><body>built app</body></html>");
+    await writeFile(path.join(dist, "app.js"), "console.log('built')");
+    await deployWorker(dist, distEntry, { name: "blueprint-demo" });
+    const appDeployment: { files: string[] } = JSON.parse(await readFile(log, "utf8"));
+    assert.deepEqual(appDeployment.files.sort(), ["app.js", "index.html"]);
 
     process.env.BLUEPRINT_TEST_ACCOUNTS = JSON.stringify([
       { id: "personal-id", name: "personal" },

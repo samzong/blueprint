@@ -133,6 +133,24 @@ export async function readProject(projectRoot: string): Promise<ProjectManifest>
   return parseManifest(value, filename);
 }
 
+export async function readCompatibleProject(
+  projectRoot: string,
+  preset: ProjectPreset,
+): Promise<ProjectManifest | undefined> {
+  const root = path.resolve(projectRoot);
+  let existing: ProjectManifest;
+  try {
+    existing = await readProject(root);
+  } catch (error) {
+    if (errorCode(error) === "ENOENT") return undefined;
+    throw error;
+  }
+  if (existing.preset !== preset) {
+    throw new Error(`${path.join(root, projectFilename)}: preset is ${existing.preset}, not ${preset}`);
+  }
+  return existing;
+}
+
 export async function recordProject(
   projectRoot: string,
   preset: ProjectPreset,
@@ -141,16 +159,7 @@ export async function recordProject(
 ): Promise<ProjectManifest> {
   const root = path.resolve(projectRoot);
   const relativeEntry = path.relative(root, path.resolve(entry)).split(path.sep).join("/") || ".";
-  let existing: ProjectManifest | undefined;
-  try {
-    existing = await readProject(root);
-  } catch (error) {
-    if (errorCode(error) !== "ENOENT") throw error;
-  }
-
-  if (existing && existing.preset !== preset) {
-    throw new Error(`${path.join(root, projectFilename)}: preset is ${existing.preset}, not ${preset}`);
-  }
+  const existing = await readCompatibleProject(root, preset);
 
   const manifest: ProjectManifest = existing
     ? { ...existing, entry: relativeEntry }
