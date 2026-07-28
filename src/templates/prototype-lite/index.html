@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__PROJECT_TITLE__</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;family=JetBrains+Mono:wght@400;500;700&amp;family=Noto+Sans+SC:wght@400;500;700;900&amp;display=swap" rel="stylesheet">
+<style>
+body {
+  font-family: Inter, "Noto Sans SC", system-ui, sans-serif;
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+.mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+</style>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ["Inter", "Noto Sans SC", "system-ui", "sans-serif"],
+        mono: ["JetBrains Mono", "ui-monospace", "monospace"],
+      },
+      colors: {
+        bg: "#ffffff",
+        "bg-subtle": "#fafafa",
+        "bg-muted": "#f5f5f5",
+        fg: "#0a0a0a",
+        "fg-muted": "#525252",
+        "fg-subtle": "#a3a3a3",
+        line: "#e7e7e7",
+        accent: "#2563eb",
+        "accent-ultra": "#eff6ff",
+      },
+    },
+  },
+};
+</script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+
+const TABS = [
+  {
+    id: "explore",
+    label: "Explore",
+    hero: "Explore a product direction",
+    subhero: "Try a realistic prompt and inspect the resulting cards.",
+    placeholder: "What should this prototype help someone decide?",
+    prompts: [
+      "Compare the strongest options",
+      "Show the main user journey",
+      "Find the riskiest assumption",
+      "Summarize the next decision",
+    ],
+    answer: {
+      kind: "cards",
+      eyebrow: "Exploration",
+      title: "Three useful angles",
+      summary: "A compact response for “{query}”.",
+      items: ["User need", "Product boundary", "Proof required"],
+    },
+  },
+  {
+    id: "workflow",
+    label: "Workflow",
+    hero: "Test the interaction model",
+    subhero: "Switch modes to prove that state changes alter the result.",
+    placeholder: "Which workflow should we simulate?",
+    prompts: [
+      "Draft a research workflow",
+      "Trace a support request",
+      "Prepare a release check",
+      "Review an approval path",
+    ],
+    answer: {
+      kind: "tools",
+      eyebrow: "Workflow",
+      title: "A minimal execution path",
+      summary: "The prototype mapped “{query}” to these steps.",
+      items: ["1. Collect input", "2. Produce result", "3. Verify outcome"],
+    },
+  },
+];
+
+function App() {
+  const [activeTab, setActiveTab] = useState(TABS[0].id);
+  const [query, setQuery] = useState("");
+  const [submitted, setSubmitted] = useState("");
+  const tab = TABS.find((item) => item.id === activeTab) ?? TABS[0];
+  const answerLayout = {
+    cards: "grid sm:grid-cols-3 gap-3",
+    tools: "grid gap-2 mono",
+    chat: "flex flex-col gap-3",
+  }[tab.answer.kind] ?? "grid sm:grid-cols-3 gap-3";
+  const answerItem = {
+    cards: "rounded-md border border-line bg-bg-subtle p-4 text-sm",
+    tools: "rounded-md bg-fg text-bg px-4 py-3 text-xs",
+    chat: "max-w-xl rounded-md bg-accent-ultra px-4 py-3 text-sm odd:self-end odd:bg-bg-muted",
+  }[tab.answer.kind] ?? "rounded-md border border-line bg-bg-subtle p-4 text-sm";
+
+  const chooseTab = (id) => {
+    setActiveTab(id);
+    setQuery("");
+    setSubmitted("");
+  };
+  const runQuery = (value) => {
+    const next = value.trim();
+    if (!next) return;
+    setQuery(next);
+    setSubmitted(next);
+  };
+
+  return (
+    <div className="min-h-screen bg-bg-subtle text-fg">
+      <nav className="sticky top-0 z-50 border-b border-line bg-white/85 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+          <div className="text-lg font-bold tracking-tight">__PROJECT_TITLE__</div>
+          <div className="flex gap-1">
+            {TABS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                aria-pressed={activeTab === item.id}
+                onClick={() => chooseTab(item.id)}
+                className={`min-h-11 rounded-md px-4 text-sm font-medium ${
+                  activeTab === item.id ? "bg-fg text-bg" : "text-fg-muted hover:bg-bg-muted"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </nav>
+
+      <main>
+        <section className="mx-auto max-w-4xl px-6 pb-12 pt-24 text-center">
+          <h1 className="mb-4 text-5xl font-bold tracking-tight">{tab.hero}</h1>
+          <p className="text-lg text-fg-muted">{tab.subhero}</p>
+        </section>
+
+        <section className="mx-auto max-w-3xl px-6 pb-24">
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              runQuery(query);
+            }}
+            className="rounded-lg border border-line bg-bg p-2 shadow-sm"
+          >
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={tab.placeholder}
+              aria-label={tab.placeholder}
+              className="w-full px-4 py-3 text-base outline-none"
+            />
+            <div className="flex flex-wrap gap-2 px-2 pb-1 pt-2">
+              {tab.prompts.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => runQuery(prompt)}
+                  className="min-h-11 rounded-md border border-line px-3 text-xs text-fg-muted hover:bg-bg-muted"
+                >
+                  {prompt}
+                </button>
+              ))}
+              <button
+                type="submit"
+                disabled={!query.trim()}
+                className="ml-auto min-h-11 rounded-md bg-fg px-4 text-sm font-medium text-bg disabled:opacity-30"
+              >
+                Run
+              </button>
+            </div>
+          </form>
+
+          <div className="mt-6 min-h-52 rounded-lg border border-line bg-bg p-6" aria-live="polite">
+            {submitted ? (
+              <div>
+                <div className="mono mb-3 text-xs uppercase tracking-wider text-accent">{tab.answer.eyebrow}</div>
+                <h2 className="mb-2 text-2xl font-semibold tracking-tight">{tab.answer.title}</h2>
+                <p className="mb-5 text-fg-muted">{tab.answer.summary.replace("{query}", submitted)}</p>
+                <div className={answerLayout} data-answer-kind={tab.answer.kind}>
+                  {tab.answer.items.map((item) => <div key={item} className={answerItem}>{item}</div>)}
+                </div>
+              </div>
+            ) : (
+              <div className="grid h-40 place-items-center text-sm text-fg-subtle">
+                Choose a prompt or enter your own to render this mode’s result.
+              </div>
+            )}
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

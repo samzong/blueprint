@@ -1,0 +1,33 @@
+{
+  "name": "@samzong/blueprint",
+  "version": "0.1.0",
+  "description": "Deterministic web scaffolding and local preview for the blueprint agent skill.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "blueprint": "./dist/bin.js"
+  },
+  "files": [
+    "dist",
+    "skill"
+  ],
+  "scripts": {
+    "blueprint": "node src/cli.ts",
+    "build": "node scripts/build.mjs",
+    "check": "pnpm typecheck && pnpm build && node --test test/*.test.ts",
+    "prepack": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test test/*.test.ts"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@kitup/sdk": "^0.1.3"
+  }
+}

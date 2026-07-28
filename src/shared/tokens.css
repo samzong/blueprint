@@ -1,0 +1,17 @@
+:root {
+  --bg: #ffffff;
+  --bg-subtle: #fafafa;
+  --bg-muted: #f5f5f5;
+  --fg: #0a0a0a;
+  --fg-muted: #525252;
+  --fg-subtle: #a3a3a3;
+  --border: #e7e7e7;
+  --border-strong: #d4d4d4;
+  --accent: #2563eb;
+  --accent-soft: #dbeafe;
+  --accent-ultra: #eff6ff;
+  --highlight: #fef08a;
+  --font-sans: Inter, "Noto Sans SC", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+  --shadow-lift: 0 18px 60px -32px rgba(15, 23, 42, 0.32);
+}

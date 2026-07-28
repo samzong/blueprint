@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: Inter, "Noto Sans SC", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+  --color-bg: #ffffff;
+  --color-bg-subtle: #fafafa;
+  --color-bg-muted: #f5f5f5;
+  --color-card: #ffffff;
+  --color-fg: #0a0a0a;
+  --color-fg-muted: #525252;
+  --color-fg-subtle: #a3a3a3;
+  --color-line: #e7e7e7;
+  --color-line-soft: #f0f0f0;
+  --color-line-strong: #d4d4d4;
+  --color-accent: #2563eb;
+  --color-accent-soft: #dbeafe;
+  --color-accent-ultra: #eff6ff;
+  --color-highlight: #fef08a;
+  --shadow-lift: 0 18px 60px -32px rgba(15, 23, 42, 0.32);
+}
+
+@layer base {
+  html {
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    overflow-x: hidden;
+    background: var(--color-bg-subtle);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+
+  button {
+    font-family: inherit;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  p {
+    overflow-wrap: anywhere;
+  }
+}
+
+@layer utilities {
+  .mono {
+    font-family: var(--font-mono);
+  }
+
+  .canvas-bg {
+    background-color: #fafafa;
+    background-image:
+      linear-gradient(rgba(10, 10, 10, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(10, 10, 10, 0.035) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+}
