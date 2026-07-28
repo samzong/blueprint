@@ -57,10 +57,18 @@ export function validateFragment(content: string, filename: string): void {
       if (attribute.name === "srcdoc") {
         throw new Error(`${filename}: unsafe srcdoc attribute`);
       }
-      if (
-        ["href", "src", "xlink:href", "action", "formaction"].includes(attribute.name) &&
-        ["javascript:", "vbscript:"].includes(new URL(attribute.value, "https://blueprint.invalid").protocol)
-      ) {
+      if (!["href", "src", "xlink:href", "action", "formaction"].includes(attribute.name)) continue;
+
+      if (!URL.canParse(attribute.value, "https://blueprint.invalid")) {
+        throw new Error(`${filename}: unsafe URL in ${attribute.name}`);
+      }
+      const protocol = new URL(attribute.value, "https://blueprint.invalid").protocol;
+      // parse5 reports SVG `xlink:href` as name "href" with prefix "xlink".
+      const imageSource =
+        (attribute.name === "src" && (node.tagName === "img" || node.tagName === "source")) ||
+        (attribute.name === "href" && node.tagName === "image");
+      const dataImage = protocol === "data:" && imageSource && /^data:image\//i.test(attribute.value.trim());
+      if (["javascript:", "vbscript:", "file:", "data:"].includes(protocol) && !dataImage) {
         throw new Error(`${filename}: unsafe URL in ${attribute.name}`);
       }
     }

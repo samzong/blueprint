@@ -10,6 +10,10 @@ import { promisify } from "node:util";
 const exec = promisify(execFile);
 const repository = fileURLToPath(new URL("..", import.meta.url));
 
+test("imports the CLI without a script argv entry", async () => {
+  await exec(process.execPath, ["--input-type=module", "--eval", "await import('./src/cli.ts')"], { cwd: repository });
+});
+
 test("installs a runnable package with every preset and the bundled skill", { timeout: 30_000 }, async () => {
   const scratch = await mkdtemp(path.join(os.tmpdir(), "blueprint-package-"));
   await exec("npm", ["pack", "--pack-destination", scratch], { cwd: repository });
@@ -25,7 +29,8 @@ test("installs a runnable package with every preset and the bundled skill", { ti
 
   const executable = path.join(prefix, "node_modules", ".bin", "blueprint");
   const { stdout: version } = await exec(executable, ["--version"], { cwd: scratch });
-  assert.equal(version.trim(), "blueprint 0.1.0");
+  const metadata: { version: string } = JSON.parse(await readFile(path.join(repository, "package.json"), "utf8"));
+  assert.equal(version.trim(), `blueprint ${metadata.version}`);
 
   const { stdout: help, stderr: helpError } = await exec(executable, [], { cwd: scratch });
   assert.equal(helpError, "");

@@ -38,7 +38,12 @@ if (args[0] === "--version") {
   }));
   writeFileSync(
     process.env.WRANGLER_OUTPUT_FILE_PATH,
-    JSON.stringify({ type: "deploy", targets: ["https://blueprint-demo.example"] }) + "\\n",
+    JSON.stringify({
+      type: "deploy",
+      targets: process.env.BLUEPRINT_TEST_TARGETS
+        ? JSON.parse(process.env.BLUEPRINT_TEST_TARGETS)
+        : ["https://blueprint-demo.example"],
+    }) + "\\n",
   );
 }
 `,
@@ -49,6 +54,7 @@ if (args[0] === "--version") {
   const originalAccounts = process.env.BLUEPRINT_TEST_ACCOUNTS;
   const originalCloudflareAccountId = process.env.CLOUDFLARE_ACCOUNT_ID;
   const originalLog = process.env.BLUEPRINT_TEST_LOG;
+  const originalTargets = process.env.BLUEPRINT_TEST_TARGETS;
   const originalFetch = globalThis.fetch;
   process.env.PATH = `${bin}${path.delimiter}${originalPath}`;
   process.env.BLUEPRINT_TEST_ACCOUNTS = JSON.stringify([{ id: "account-id", name: "personal" }]);
@@ -71,6 +77,13 @@ if (args[0] === "--version") {
     assert.deepEqual(args.slice(0, 5), ["deploy", "--assets", assets, "--name", "blueprint-demo"]);
     assert.ok(args.includes("--no-autoconfig"));
     assert.ok(args.includes("--strict"));
+
+    process.env.BLUEPRINT_TEST_TARGETS = JSON.stringify(["not-a-url", "https://blueprint-demo.example"]);
+    assert.equal(
+      (await deployWorker(entry, await checkEntry(entry), { name: "blueprint-demo" })).url,
+      "https://blueprint-demo.example",
+    );
+    delete process.env.BLUEPRINT_TEST_TARGETS;
 
     const project = path.join(directory, "managed");
     const projectEntry = path.join(directory, "managed-output", "custom.html");
@@ -131,6 +144,8 @@ if (args[0] === "--version") {
     else process.env.CLOUDFLARE_ACCOUNT_ID = originalCloudflareAccountId;
     if (originalLog === undefined) delete process.env.BLUEPRINT_TEST_LOG;
     else process.env.BLUEPRINT_TEST_LOG = originalLog;
+    if (originalTargets === undefined) delete process.env.BLUEPRINT_TEST_TARGETS;
+    else process.env.BLUEPRINT_TEST_TARGETS = originalTargets;
     globalThis.fetch = originalFetch;
     await rm(directory, { force: true, recursive: true });
   }

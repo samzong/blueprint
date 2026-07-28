@@ -13,6 +13,7 @@ import {
   runBundledSkillInstall,
   type InstallFlagValues,
 } from "@kitup/sdk";
+import { parse, type DefaultTreeAdapterMap } from "parse5";
 
 import { deployWorker } from "./deploy.ts";
 import { checkArchiveOutput, createArchive } from "./presets/archive.ts";
@@ -278,13 +279,49 @@ export async function resolveEntry(target: string): Promise<string> {
     : path.join(absoluteTarget, "index.html");
 }
 
+const cssFileUrl = /(?:url\(|@import\s+)\s*['"]?\s*file:/i;
+const templateMarker = /\{\{[^}]+\}\}/;
+
 function checkDocumentBasics(entry: string, html: string): void {
+  let fileUrl = false;
+  let unresolvedMarker = false;
+  const nodes: Array<{ node: DefaultTreeAdapterMap["node"]; rawTextTag: string }> = parse(html).childNodes.map(
+    (node) => ({ node, rawTextTag: "" }),
+  );
+  for (const current of nodes) {
+    const { node } = current;
+    if ("tagName" in node) {
+      for (const attribute of node.attrs) {
+        if (
+          ["href", "src", "xlink:href", "action", "formaction", "poster", "data", "cite"].includes(
+            attribute.name,
+          ) &&
+          URL.canParse(attribute.value, "https://blueprint.invalid") &&
+          new URL(attribute.value, "https://blueprint.invalid").protocol === "file:"
+        ) {
+          fileUrl = true;
+        }
+        if (attribute.name === "style" && cssFileUrl.test(attribute.value)) fileUrl = true;
+        if (templateMarker.test(attribute.value)) unresolvedMarker = true;
+      }
+      const rawTextTag =
+        node.tagName === "script" || node.tagName === "style" ? node.tagName : current.rawTextTag;
+      nodes.push(...node.childNodes.map((child) => ({ node: child, rawTextTag })));
+      if ("content" in node) {
+        nodes.push(...node.content.childNodes.map((child) => ({ node: child, rawTextTag })));
+      }
+    } else if ("value" in node) {
+      if (current.rawTextTag === "style" && cssFileUrl.test(node.value)) fileUrl = true;
+      if (current.rawTextTag !== "script" && templateMarker.test(node.value)) unresolvedMarker = true;
+    }
+  }
+
   const errors = [
     !/<html(?:\s|>)/i.test(html) && "missing <html>",
     !/<head(?:\s|>)/i.test(html) && "missing <head>",
     !/<body(?:\s|>)/i.test(html) && "missing <body>",
-    /\{\{[^}]+\}\}/.test(html) && "contains unresolved template markers",
-    /file:\/\//i.test(html) && "contains file:// URLs",
+    unresolvedMarker && "contains unresolved template markers",
+    fileUrl && "contains file:// URLs",
   ].filter(Boolean);
 
   if (errors.length > 0) throw new Error(`${entry}: ${errors.join(", ")}`);
@@ -351,7 +388,6 @@ export async function preview(target: string, rootOption: string | undefined, po
   if (!rootStat.isDirectory()) throw new Error(`preview root is not a directory: ${root}`);
 
   const url = entryUrl(entry, root, port);
-  process.stdout.write(`Open ${url}\n`);
 
   const child = spawn(
     "gofs",
@@ -374,9 +410,14 @@ export async function preview(target: string, rootOption: string | undefined, po
 
     process.once("SIGINT", stopOnInterrupt);
     process.once("SIGTERM", stopOnTerminate);
+    child.once("spawn", () => process.stdout.write(`Open ${url}\n`));
     child.once("error", (error) => {
       cleanup();
-      reject(error);
+      reject(
+        (error as NodeJS.ErrnoException).code === "ENOENT"
+          ? new Error("gofs is required; install with brew install gofs")
+          : error,
+      );
     });
     child.once("exit", (code, signal) => {
       cleanup();
@@ -563,7 +604,7 @@ export async function main(argv: string[]): Promise<number> {
   return 1;
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main(process.argv.slice(2))
     .then((code) => {
       process.exitCode = code;
