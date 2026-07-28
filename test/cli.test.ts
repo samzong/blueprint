@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
-import { cp, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { appendFile, cp, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { checkEntry, entryUrl, formatProjectList, main, parseArgs } from "../src/cli.ts";
+import { checkEntry, entryUrl, formatProjectList, main, parseArgs, preview } from "../src/cli.ts";
 import { createArchive } from "../src/presets/archive.ts";
 import { createBriefing } from "../src/presets/briefing.ts";
 import { createPitch } from "../src/presets/pitch.ts";
@@ -110,6 +110,27 @@ test("rejects executable fragment markup", () => {
     () => validateFragment('<a href="java&#x0A;script:alert(1)">open</a>', "fragment.html"),
     /unsafe URL/,
   );
+  assert.throws(
+    () => validateFragment('<a href="http://[">broken</a>', "fragment.html"),
+    /fragment\.html: unsafe URL in href/,
+  );
+  assert.throws(
+    () => validateFragment('<a href="data:text/html,hello">data</a>', "fragment.html"),
+    /fragment\.html: unsafe URL in href/,
+  );
+  assert.doesNotThrow(() =>
+    validateFragment('<img src="data:image/png;base64,iVBORw0KGgo=" alt="">', "fragment.html"),
+  );
+  for (const embedded of [
+    '<svg><image href="data:image/png;base64,iVBORw0KGgo="></image></svg>',
+    '<svg><image xlink:href="data:image/png;base64,iVBORw0KGgo="></image></svg>',
+  ]) {
+    assert.doesNotThrow(() => validateFragment(embedded, "fragment.html"));
+  }
+  assert.throws(
+    () => validateFragment('<svg><image href="data:text/html,hello"></image></svg>', "fragment.html"),
+    /fragment\.html: unsafe URL in href/,
+  );
 });
 
 test("rejects file URLs in generated HTML", async () => {
@@ -120,6 +141,60 @@ test("rejects file URLs in generated HTML", async () => {
   await assert.rejects(checkEntry(entry), /contains file:\/\/ URLs/);
 });
 
+test("rejects local URLs and unresolved markers outside URL attributes", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-style-"));
+  const write = async (name: string, body: string) => {
+    const entry = path.join(directory, name);
+    await writeFile(entry, `<html><head>${body}</head><body>ok</body></html>`);
+    return entry;
+  };
+
+  await assert.rejects(
+    checkEntry(await write("css.html", "<style>body{background:url(file:///Users/x/bg.png)}</style>")),
+    /contains file:\/\/ URLs/,
+  );
+  await assert.rejects(
+    checkEntry(await write("import.html", '<style>@import "file:///Users/x/theme.css";</style>')),
+    /contains file:\/\/ URLs/,
+  );
+  await assert.rejects(
+    checkEntry(await write("inline.html", '</head><body><div style="background:url(file:///Users/x/a.png)">y')),
+    /contains file:\/\/ URLs/,
+  );
+  await assert.rejects(
+    checkEntry(await write("attribute.html", '</head><body><img src="{{hero_image}}" alt="">')),
+    /contains unresolved template markers/,
+  );
+
+  // Braces in ordinary CSS are not template markers.
+  assert.ok(await checkEntry(await write("braces.html", "<style>@media screen{.a{color:red}}</style>")));
+});
+
+test("reports a missing gofs before printing a preview URL", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-preview-"));
+  const entry = path.join(directory, "index.html");
+  const bin = path.join(directory, "bin");
+  const originalPath = process.env.PATH;
+  const originalWrite = process.stdout.write;
+  let output = "";
+  await mkdir(bin);
+  await writeFile(entry, "<html><head></head><body>ready</body></html>");
+  process.env.PATH = bin;
+  process.stdout.write = ((chunk: string | Uint8Array) => {
+    output += chunk.toString();
+    return true;
+  }) as typeof process.stdout.write;
+
+  try {
+    await assert.rejects(preview(entry, undefined, 4175), /gofs is required; install with brew install gofs/);
+    assert.equal(output, "");
+  } finally {
+    process.stdout.write = originalWrite;
+    if (originalPath === undefined) delete process.env.PATH;
+    else process.env.PATH = originalPath;
+    await rm(directory, { force: true, recursive: true });
+  }
+});
 
 test("creates a portable pitch from semantic source files", async () => {
   const fixture = fileURLToPath(new URL("fixtures/pitch", import.meta.url));
@@ -154,6 +229,34 @@ test("creates a portable archive from a Markdown corpus", async () => {
   assert.ok(generated.includes("\\u003c/script>"));
   assert.match(generated, /location\.hash/);
   assert.doesNotMatch(generated, /fetch\(/);
+
+  const runtimeStart = generated.indexOf("function escapeHtml");
+  const runtimeEnd = generated.indexOf("function isTableSeparator");
+  assert.ok(runtimeStart >= 0 && runtimeEnd > runtimeStart);
+  const renderInline = new Function(
+    "value",
+    `function docPathFromSlug() { return ""; }
+function slugFromDocPath(value) { return value; }
+${generated.slice(runtimeStart, runtimeEnd)}
+return inlineMarkdown(value);`,
+  ) as (value: string) => string;
+  assert.equal(
+    renderInline("[docs](https://example.com/s?a=1&b=2)"),
+    '<a href="https://example.com/s?a=1&amp;b=2" target="_blank" rel="noreferrer">docs</a>',
+  );
+});
+
+test("archive accepts documentation containing local URLs and template syntax", async () => {
+  const fixture = fileURLToPath(new URL("fixtures/archive", import.meta.url));
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-archive-content-"));
+  await cp(fixture, directory, { recursive: true });
+  await appendFile(
+    path.join(directory, "src", "docs", "README.md"),
+    "\nLogs are written to `file:///var/log/app.log`.\n\nTemplate example: `{{ service_name }}`.\n",
+  );
+
+  assert.equal(await main(["create", "archive", directory]), 0);
+  assert.match(await readFile(path.join(directory, ".blueprint.json"), "utf8"), /"preset": "archive"/);
 });
 
 test("creates a portable briefing with the shared deck runtime", async () => {

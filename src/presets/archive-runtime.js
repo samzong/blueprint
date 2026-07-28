@@ -233,7 +233,7 @@ function markdownLink(_match, label, href) {
   const internalPath = docPathFromSlug(href);
   if (internalPath) return `<a href="#/${slugFromDocPath(internalPath)}">${label}</a>`;
   if (!/^(https?:|mailto:|#)/i.test(href)) return label;
-  return `<a href="${escapeHtml(href)}" target="_blank" rel="noreferrer">${label}</a>`;
+  return `<a href="${href}" target="_blank" rel="noreferrer">${label}</a>`;
 }
 
 /**

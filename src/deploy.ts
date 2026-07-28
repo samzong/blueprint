@@ -86,7 +86,7 @@ function deploymentUrl(output: string): string {
       ) {
         const target = event.targets.find(
           (candidate): candidate is string =>
-            typeof candidate === "string" && new URL(candidate).protocol === "https:",
+            typeof candidate === "string" && URL.canParse(candidate) && new URL(candidate).protocol === "https:",
         );
         if (target) return target;
       }
