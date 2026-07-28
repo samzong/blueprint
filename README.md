@@ -5,9 +5,17 @@ blueprint turns a conversational web brief into deterministic, portable output.
 - The CLI owns presets, validation, preview, deployment, and project metadata.
 - The bundled Agent Skill owns preset selection, research, writing, and visual review.
 
-## Quick start
+## Install
 
-Requires Node.js 24+, pnpm 10 for development, and `gofs` 0.2.4+ on `PATH`.
+```bash
+brew tap samzong/tap
+brew trust samzong/tap
+brew install blueprint
+```
+
+Homebrew installs Node.js, `gofs`, and Wrangler as dependencies.
+
+## Quick start
 
 ```bash
 blueprint create pitch .local/demo
@@ -36,7 +44,6 @@ Every successful `create` writes `.blueprint.json` with the project identity, en
 Deployment requires Wrangler 4+:
 
 ```bash
-brew install cloudflare-wrangler
 wrangler login
 blueprint deploy .local/demo --name repo-task
 ```
@@ -54,6 +61,8 @@ blueprint skill install
 The installer uses `@kitup/sdk` to detect supported agents, select user or project scope, and protect unmanaged targets from accidental overwrite. Run `blueprint skill install --help` for host, scope, dry-run, and overwrite options.
 
 ## Development
+
+Development requires Node.js 24+ and pnpm 10.
 
 ```bash
 pnpm install
