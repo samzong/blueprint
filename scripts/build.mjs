@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const dist = path.join(root, "dist");
 const assets = [
+  "presets/archive.css",
+  "presets/archive-runtime.js",
   "presets/briefing.css",
   "presets/pitch.css",
   "shared/deck.css",

@@ -6,6 +6,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { checkEntry, entryUrl, formatProjectList, parseArgs } from "../src/cli.ts";
+import { createArchive } from "../src/presets/archive.ts";
 import { createBriefing } from "../src/presets/briefing.ts";
 import { createPitch } from "../src/presets/pitch.ts";
 import { createScaffold } from "../src/presets/scaffold.ts";
@@ -125,6 +126,22 @@ test("creates a portable pitch from semantic source files", async () => {
   assert.doesNotMatch(generated, /\{\{[^}]+\}\}/);
 });
 
+test("creates a portable archive from a Markdown corpus", async () => {
+  const fixture = fileURLToPath(new URL("fixtures/archive", import.meta.url));
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-archive-"));
+  const output = path.join(directory, "index.html");
+
+  const entry = await createArchive(fixture, output);
+  const generated = await readFile(entry, "utf8");
+
+  assert.equal(await checkEntry(entry), entry);
+  assert.match(generated, /const ARCHIVE =/);
+  assert.match(generated, /#c0c0c0/);
+  assert.ok(generated.includes("guides/01-guide.md"));
+  assert.ok(generated.includes("\\u003c/script>"));
+  assert.match(generated, /location\.hash/);
+  assert.doesNotMatch(generated, /fetch\(/);
+});
 
 test("creates a portable briefing with the shared deck runtime", async () => {
   const fixture = fileURLToPath(new URL("fixtures/briefing", import.meta.url));

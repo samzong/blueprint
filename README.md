@@ -19,7 +19,7 @@ The bundled skill owns semantic behavior:
 
 ## Current milestone
 
-This repository contains the blueprint skill migration baseline, executable shared assets, and working `create`, `check`, `preview`, `deploy`, and `list` commands. `pitch` and `briefing` compile semantic source files into portable single-file HTML. Prototype and dossier remain scaffold workflows.
+This repository contains the blueprint skill migration baseline, executable shared assets, and working `create`, `check`, `preview`, `deploy`, and `list` commands. `pitch`, `briefing`, and `archive` compile semantic source files into portable single-file HTML. Prototype and dossier remain scaffold workflows.
 
 ## Commands
 
@@ -31,6 +31,7 @@ Installed CLI:
 blueprint --version
 blueprint create pitch <project-directory>
 blueprint create briefing <project-directory>
+blueprint create archive <project-directory>
 blueprint create prototype-lite <empty-directory>
 blueprint create prototype-full <empty-directory>
 blueprint create dossier <empty-directory>
@@ -84,17 +85,19 @@ npm pack
 ```text
 <project-directory>/
   src/
-    pitch.json | briefing.json
-    sections.html | slides.html
+    pitch.json | briefing.json | archive.json
+    sections.html | slides.html | docs/**/*.md
     style.css                  # optional
   index.html                   # generated
 ```
 
-Pitch uses `src/pitch.json` plus `src/sections.html`; briefing uses `src/briefing.json` plus `src/slides.html`. Source fragments are compiler input, not standalone pages. Open or preview only the generated root `index.html`.
+Pitch uses `src/pitch.json` plus `src/sections.html`; briefing uses `src/briefing.json` plus `src/slides.html`; archive uses `src/archive.json` plus a Markdown corpus under `src/docs`. Source files are compiler input, not standalone pages. Open or preview only the generated root `index.html`.
 
 `pitch.json` supplies `title`, `brand`, `date`, `footer`, and optional `lang`. Pitch sections must include `hero`, `solution`, and `cta` IDs. `briefing.json` supplies `title` and optional `lang`; briefing requires a cover plus at least three content slides, each with `.slide-tag` and `.slide-num`.
 
-blueprint inlines preset tokens, shared deck styles, runtime, and optional custom CSS into the generated output.
+`archive.json` supplies `title`, optional `lang`, and optional `downloadName`. Archive embeds every Markdown document, the `win98-web` theme, hash routing, search, ZIP download, and optional Mermaid rendering into one generated file.
+
+blueprint inlines preset styles, runtime, content, and optional custom CSS into the generated output.
 
 ## Layout
 
@@ -104,6 +107,9 @@ src/
   deploy.ts
   project.ts
   presets/
+    archive.css
+    archive-runtime.js
+    archive.ts
     briefing.css
     briefing.ts
     pitch.css
