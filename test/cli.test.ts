@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { appendFile, cp, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { appendFile, cp, mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -216,6 +216,47 @@ test("reports a missing gofs before printing a preview URL", async () => {
   }
 });
 
+test("routes managed Vite projects through their dev server", async () => {
+  const parent = await mkdtemp(path.join(os.tmpdir(), "blueprint-preview-vite-"));
+  const directory = path.join(parent, "report");
+  const entry = await createScaffold("dossier", directory);
+  const bin = path.join(parent, "bin");
+  const capture = path.join(parent, "capture.json");
+  const originalPath = process.env.PATH;
+  const originalCapture = process.env.BLUEPRINT_PREVIEW_CAPTURE;
+  await recordProject(directory, "dossier", entry, "0.1.0");
+  await assert.rejects(preview(entry, undefined, 43179), /dependencies are missing; run pnpm install --ignore-workspace/);
+  await mkdir(path.join(directory, "node_modules", "vite"), { recursive: true });
+  await mkdir(bin);
+  await writeFile(
+    path.join(bin, "pnpm"),
+    `#!${process.execPath}\nrequire("node:fs").writeFileSync(process.env.BLUEPRINT_PREVIEW_CAPTURE, JSON.stringify({ argv: process.argv.slice(2), cwd: process.cwd() }));\n`,
+    { mode: 0o755 },
+  );
+  process.env.PATH = bin;
+  process.env.BLUEPRINT_PREVIEW_CAPTURE = capture;
+
+  try {
+    assert.equal(await preview(entry, undefined, 43179), 0);
+    const captured: { argv: string[]; cwd: string } = JSON.parse(await readFile(capture, "utf8"));
+    assert.deepEqual(captured.argv, [
+      "--reporter=silent",
+      "--ignore-workspace",
+      "dev",
+      "--port",
+      "43179",
+      "--strictPort",
+    ]);
+    assert.equal(captured.cwd, await realpath(directory));
+  } finally {
+    if (originalPath === undefined) delete process.env.PATH;
+    else process.env.PATH = originalPath;
+    if (originalCapture === undefined) delete process.env.BLUEPRINT_PREVIEW_CAPTURE;
+    else process.env.BLUEPRINT_PREVIEW_CAPTURE = originalCapture;
+    await rm(parent, { force: true, recursive: true });
+  }
+});
+
 test("creates a portable pitch from semantic source files", async () => {
   const fixture = fileURLToPath(new URL("fixtures/pitch", import.meta.url));
   const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-pitch-"));
@@ -390,7 +431,9 @@ test("scaffolds dossier and prototype-full from the shared template", async () =
   const dossierApp = await readFile(path.join(dossier, "src", "App.tsx"), "utf8");
   const prototypeApp = await readFile(path.join(prototype, "src", "App.tsx"), "utf8");
   const viteTypes = await readFile(path.join(dossier, "src", "vite-env.d.ts"), "utf8");
+  const workspace = await readFile(path.join(dossier, "pnpm-workspace.yaml"), "utf8");
   assert.equal(dossierPackage.name, "my-dossier");
+  assert.equal(workspace, "packages: []\n");
   assert.match(viteTypes, /vite\/client/);
   assert.match(dossierApp, /My Dossier/);
   assert.match(dossierApp, />Dossier</);
