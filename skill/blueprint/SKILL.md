@@ -78,8 +78,7 @@ Let `blueprint create` manage `.blueprint.json`. Never hand-write, delete, or co
 - Discover from the current directory: `blueprint list`
 - Discover under another root: `blueprint list --root <path>`
 - Request machine-readable discovery output: append `--json`
-- Preview compiled or single-file output: `blueprint preview <target>`
-- Preview `prototype-full` or `dossier`: run `pnpm install` when needed, then `pnpm dev`
+- Preview: `blueprint preview <target>`; for `prototype-full` or `dossier`, run `pnpm install` first when dependencies are absent.
 
 Use paths returned by discovery; do not store absolute paths in `.blueprint.json`. Treat `deployed` as a record of a previously verified publish, not proof that the remote still exists.
 

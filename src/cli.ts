@@ -380,17 +380,41 @@ export function entryUrl(entry: string, root: string, port: number): string {
 
 export async function preview(target: string, rootOption: string | undefined, port: number): Promise<number> {
   const entry = await checkEntry(target);
-  const root = path.resolve(rootOption ?? path.dirname(entry));
+  const project = await findProjectOrNull(entry);
+  const viteProject =
+    project &&
+    path.resolve(project.root, project.manifest.entry) === entry &&
+    (project.manifest.preset === "prototype-full" || project.manifest.preset === "dossier")
+      ? project
+      : null;
+  if (viteProject && rootOption) throw new Error(`${viteProject.manifest.preset}: --root is not supported`);
+
+  const root = viteProject?.root ?? path.resolve(rootOption ?? path.dirname(entry));
   const rootStat = await stat(root);
   if (!rootStat.isDirectory()) throw new Error(`preview root is not a directory: ${root}`);
 
-  const url = entryUrl(entry, root, port);
+  if (viteProject) {
+    try {
+      await stat(path.join(root, "node_modules", "vite"));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        throw new Error(
+          `${viteProject.manifest.preset}: dependencies are missing; run pnpm install --ignore-workspace in ${root}`,
+        );
+      }
+      throw error;
+    }
+  }
 
-  const child = spawn(
-    "gofs",
-    ["--host", "127.0.0.1", "--port", String(port), "-d", `/:${root}:ro:blueprint`],
-    { stdio: "inherit" },
-  );
+  const url = entryUrl(entry, root, port);
+  const child = viteProject
+    ? spawn("pnpm", ["--reporter=silent", "--ignore-workspace", "dev", "--port", String(port), "--strictPort"], {
+        cwd: root,
+        stdio: "inherit",
+      })
+    : spawn("gofs", ["--host", "127.0.0.1", "--port", String(port), "-d", `/:${root}:ro:blueprint`], {
+        stdio: "inherit",
+      });
 
   return await new Promise((resolve, reject) => {
     let interrupted = false;
@@ -407,12 +431,16 @@ export async function preview(target: string, rootOption: string | undefined, po
 
     process.once("SIGINT", stopOnInterrupt);
     process.once("SIGTERM", stopOnTerminate);
-    child.once("spawn", () => process.stdout.write(`Open ${url}\n`));
+    if (!viteProject) child.once("spawn", () => process.stdout.write(`Open ${url}\n`));
     child.once("error", (error) => {
       cleanup();
       reject(
         (error as NodeJS.ErrnoException).code === "ENOENT"
-          ? new Error("gofs is required; install with brew install gofs")
+          ? new Error(
+              viteProject
+                ? `pnpm is required to preview ${viteProject.manifest.preset} projects`
+                : "gofs is required; install with brew install gofs",
+            )
           : error,
       );
     });

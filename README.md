@@ -78,7 +78,7 @@ npm pack
 
 blueprint directly uses:
 
-- [gofs](https://github.com/samzong/gofs) for local preview serving
+- [gofs](https://github.com/samzong/gofs) for single-file local preview serving
 - [@kitup/sdk](https://github.com/lathe-cli/kitup) for bundled Agent Skill installation
 - [Wrangler](https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler) and [Cloudflare Workers](https://developers.cloudflare.com/workers/) for deployment
 
