@@ -103,7 +103,7 @@ Options:
   blueprint deploy [target] --name <name> [options]
 
 Arguments:
-  target  HTML file or project directory (default: .)
+  target  Project entry or project directory (default: .)
 
 Options:
   --name <name>             Worker name (required)
@@ -573,11 +573,14 @@ export async function main(argv: string[]): Promise<number> {
   if (args.command === "deploy" && args.name) {
     const entry = await checkEntry(args.target);
     const project = await findProject(args.target);
-    if (
-      (project.manifest.preset === "prototype-full" || project.manifest.preset === "dossier") &&
-      path.resolve(args.target) !== path.join(project.root, "dist")
-    ) {
-      throw new Error(`${project.manifest.preset}: run pnpm build and deploy ${path.join(project.root, "dist")}`);
+    if (project.manifest.preset === "prototype-full" || project.manifest.preset === "dossier") {
+      if (path.resolve(args.target) !== path.join(project.root, "dist")) {
+        throw new Error(`${project.manifest.preset}: run pnpm build and deploy ${path.join(project.root, "dist")}`);
+      }
+    } else if (entry !== path.resolve(project.root, project.manifest.entry)) {
+      throw new Error(
+        `${entry}: not the entry of the project at ${project.root}; deploy ${project.manifest.entry} or the project directory`,
+      );
     }
     const result = await deployWorker(args.target, entry, {
       account: args.account ?? project.manifest.deployment?.account,

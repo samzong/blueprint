@@ -150,3 +150,26 @@ if (args[0] === "--version") {
     await rm(directory, { force: true, recursive: true });
   }
 });
+
+test("refuses to deploy a file that is not the project entry", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-deploy-entry-"));
+  const project = path.join(directory, "site");
+  const entry = path.join(project, "index.html");
+  await mkdir(project);
+  await writeFile(entry, "<html><head></head><body>entry</body></html>");
+  await writeFile(path.join(project, "other.html"), "<html><head></head><body>sibling</body></html>");
+  await recordProject(project, "pitch", entry, "0.1.0");
+
+  try {
+    await assert.rejects(
+      () => main(["deploy", path.join(project, "other.html"), "--name", "demo"]),
+      /not the entry of the project/,
+    );
+    const manifest: { deployment: unknown } = JSON.parse(
+      await readFile(path.join(project, ".blueprint.json"), "utf8"),
+    );
+    assert.equal(manifest.deployment, null);
+  } finally {
+    await rm(directory, { force: true, recursive: true });
+  }
+});
