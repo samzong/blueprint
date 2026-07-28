@@ -1,9 +1,9 @@
 ---
 name: blueprint
 description: >
-  Scaffold a new web page/project with one of four preset structures (pitch / prototype / dossier / briefing),
+  Scaffold a new web page/project with one of five preset structures (pitch / prototype / dossier / briefing / archive),
   all sharing the user's unified design system (Inter + JetBrains Mono, neutral palette, blue accent).
-  briefing adds a single-file slide-deck preset with a dedicated fused theme for internal docs.
+  briefing adds a single-file slide-deck preset for internal docs; archive compiles a Markdown corpus into a searchable single-file reader.
   Use when: user says "blueprint", "new page", "start a new site", "新建一个网页", "起一个原型",
   "做个 pitch", "做个调研页", "做个 briefing", "内部说明页", "职责边界页", "新项目脚手架", or wants to spin up a fresh
   HTML/React project that follows their established visual conventions. Collects only missing
@@ -17,6 +17,8 @@ description: >
 
 把用户已经收敛的「单文件 HTML / 单文件 React Demo / Vite+React+TS Dossier / 单文件 Briefing Deck」四种工作模式固化为可复用脚手架。`pitch` / `prototype` / `dossier` 共享默认 Design System；`briefing` 额外使用 `shared/themes/briefing.md`。新加风格 = 新加一个 preset 或 theme 文件，不动核心。
 
+Also supports `archive`: Markdown corpus compiled to a searchable single-file reader with `shared/themes/win98-web.md`.
+
 ## 输入收集
 
 只收集会改变结果且用户尚未提供的信息。不要重复询问已明确的 topic、preset 或路径。
@@ -28,6 +30,7 @@ description: >
 1. **Topic**：一句话主题，例如“面向投资人介绍 Forge 的 pitch”或“产品与市场职责边界说明”。
 2. **输出目录**：用户未指定时，demo / example / scratch 默认放当前仓库 `.local/<slug>`；独立项目才询问目标目录。
 3. **Preset**：`pitch` / `prototype` / `dossier` / `briefing`。用户已点名或主题唯一命中推荐规则时直接采用，不再确认。
+   Also accept `archive` when the topic is a Markdown corpus / docs library / searchable document set.
 
 ### Preset 推荐规则
 
@@ -39,7 +42,9 @@ description: >
 | 原型 / 交互 / Demo / Tab / 点击 / mock UI | `prototype` | 可点击演示，单文件易迭代 |
 | 调研 / 对比 / teardown / 尽调 / 白皮书 / dossier / 报告 / 多页 | `dossier` | 数据驱动，能长期维护 |
 | 职责 / 边界 / 对齐 / 说明 / 工作坊 / RACI / 治理 / 流程澄清 / briefing / 教案 / 观察记录 | `briefing` | 全屏 slide 说明页，中性页型库 |
+| docs corpus / Markdown folder / archive / knowledge base / multi-doc report / search docs | `archive` | Compile Markdown into a browsable single-file archive |
 | 都不命中或同时命中多个 | 问用户：「主要给谁看？投资人 / 可点击演示 / 长期研究文档 / 内部说明对齐」 | — |
+| no hit or multiple hits including archive | Ask: primary audience — investors / clickable demo / long-form research / internal alignment / Markdown corpus | — |
 
 ### Prototype 子档位
 
@@ -53,6 +58,7 @@ description: >
 ### Briefing 无额外皮肤选择
 
 `briefing` **只有一套 theme**（`shared/themes/briefing.md`）。不要再问 ink/paper/深浅色。
+`archive` has one theme only (`shared/themes/win98-web.md`). Do not ask for OS skin variants.
 
 ## 生成
 
@@ -61,9 +67,11 @@ description: >
 1. 先执行 `blueprint --version`。命令不可用时停止生成，明确告知用户需要安装 blueprint；不要退回复制旧模板。
 2. Load `shared/design-system.md` —— 所有 preset 的基础约束。
 3. 若 preset = `briefing`，再 Load `shared/themes/briefing.md`（覆盖/扩展 token 与 slide 组件；以 theme 为准）。
+   If preset = `archive`, also Load `shared/themes/win98-web.md`.
 4. Load `presets/<preset>.md` —— 包含 source contract 与内容规则。
 5. 在指定目录生成项目。**目录非空时停下问用户**，不要覆盖。
 6. `pitch` / `briefing` 只写 `src/` 语义源，再调用 `blueprint create <preset> <output>` 生成根目录 `index.html`，随后执行 `blueprint check <output>/index.html`。不要手写或复制 shared CSS/runtime。
+   Same for `archive`: write `src/` semantic sources only, then `blueprint create archive <output>` and `blueprint check <output>/index.html`.
 7. `prototype` / `dossier` 先调用对应的 `blueprint create prototype-lite|prototype-full|dossier <output>`，再按 preset 文档填充真实内容。不要手写工具链骨架。
 8. `blueprint create` maintains `.blueprint.json` at the project root. Do not hand-write, delete, or copy that file to create a new project.
 9. Finish with a short markdown report:
@@ -76,6 +84,7 @@ description: >
 不要自动发布。只有用户检查预览后明确要求发布，才使用 Cloudflare Workers Static Assets：
 
 - `pitch` / `briefing` / `prototype-lite`：`blueprint deploy <output>/index.html --name <worker-name>`
+- `archive` single-file deploy: `blueprint deploy <output>/index.html --name <worker-name>`
 - `prototype-full` / `dossier`：先在项目内执行 `pnpm install && pnpm build`，再执行 `blueprint deploy <output>/dist --name <worker-name>`
 
 不要询问 `worker-name`。根据发布文件所在位置自动生成：
@@ -101,6 +110,7 @@ Project paths come from scan results; do not write absolute paths into `.bluepri
 - 不要加 ESLint / Prettier / Husky 等用户没要的工具
 - 不要写代码注释（遵循适用的仓库规则）
 - 不要把 `pitch` / `briefing` 的 `src/*.html` 当成可直接打开的页面；只预览编译后的根目录 `index.html`
+- Do not treat `archive` `src/` contents as openable pages; preview only the compiled root `index.html`
 - `briefing` 不要默认生成 CTA / Contact / 请示拍板页
 - `pitch` / `briefing` 的键盘切页、右侧 `.deck-rail`、播放进度与移动端导航由 compiler 注入；不要在语义源重复实现
 
@@ -121,8 +131,10 @@ Project paths come from scan results; do not write absolute paths into `.bluepri
 ├── shared/
 │   ├── design-system.md           # 默认 token + 字体 + 共用规范
 │   └── themes/
-│       └── briefing.md            # briefing 唯一皮肤（slide deck）
+│       ├── briefing.md            # briefing only theme (slide deck)
+│       └── win98-web.md           # archive theme (Win95/98 Web)
 └── presets/
+    ├── archive.md                 # archive compiler source contract
     ├── pitch.md                   # pitch compiler source contract
     ├── prototype.md               # prototype-lite / prototype-full scaffold contract
     ├── dossier.md                 # dossier scaffold contract

@@ -2,6 +2,7 @@
 
 所有 preset **必须**遵守这套 token，除非该 preset 指定了 theme 文件。
 当前例外：`briefing` → 额外遵守 `shared/themes/briefing.md`（以 theme 的 `:root` 与 slide 组件为准；本文件的字体族与反模式仍适用）。
+`archive` uses `shared/themes/win98-web.md`, which fully owns fonts, colors, controls, and layout.
 
 新 preset 想引入新 token：能共享的先升级本文件；仅某 preset 使用的放进 `shared/themes/<name>.md`。
 

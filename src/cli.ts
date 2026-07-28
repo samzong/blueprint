@@ -15,6 +15,7 @@ import {
 } from "@kitup/sdk";
 
 import { deployWorker } from "./deploy.ts";
+import { createArchive } from "./presets/archive.ts";
 import { createBriefing } from "./presets/briefing.ts";
 import { createPitch } from "./presets/pitch.ts";
 import { createScaffold } from "./presets/scaffold.ts";
@@ -39,18 +40,91 @@ export type ParsedArgs = {
   target: string;
 };
 
-const usage = `Usage:
-  blueprint create pitch [project-directory] [--output index.html]
-  blueprint create briefing [project-directory] [--output index.html]
-  blueprint create prototype-lite <empty-directory>
-  blueprint create prototype-full <empty-directory>
-  blueprint create dossier <empty-directory>
-  blueprint check [index.html-or-directory]
-  blueprint preview [index.html-or-directory] [--root path] [--port 4175]
-  blueprint deploy <index.html-or-directory> --name worker-name [--account name-or-id]
-  blueprint list [--root path] [--json]
-  blueprint skill install [--scope user|project] [--agent id] [--dry-run] [--yes] [--force]
-  blueprint --version`;
+const usage = `blueprint — agent-native web scaffolding
+
+Usage:
+  blueprint <command> [options]
+
+Commands:
+  create <preset> [directory]  Create a project from a preset
+  check [target]                Validate generated output
+  preview [target]              Preview locally
+  deploy [target]               Publish to Cloudflare Workers
+  list                          List managed projects
+  skill install                 Install the bundled Agent Skill
+  help [command]                Show help
+
+Presets:
+  pitch, briefing, archive
+  prototype-lite, prototype-full, dossier
+
+Global options:
+  -v, --version  Show version
+  -h, --help     Show help
+
+Run 'blueprint <command> --help' for command options.`;
+
+const commandHelp: Record<string, string> = {
+  create: `Usage:
+  blueprint create <preset> [directory] [--output <file>]
+
+Presets:
+  pitch, briefing, archive
+    Build one HTML file from source content
+  prototype-lite
+    Create a single-file React prototype
+  prototype-full, dossier
+    Create a Vite project
+
+Options:
+  --output <file>  Output path for pitch, briefing, or archive
+  -h, --help       Show this help`,
+  check: `Usage:
+  blueprint check [target]
+
+Arguments:
+  target  HTML file or project directory (default: .)
+
+Options:
+  -h, --help  Show this help`,
+  preview: `Usage:
+  blueprint preview [target] [options]
+
+Arguments:
+  target  HTML file or project directory (default: .)
+
+Options:
+  --root <path>  Additional filesystem root
+  --port <port>  Local port (default: 4175)
+  -h, --help     Show this help`,
+  deploy: `Usage:
+  blueprint deploy [target] --name <name> [options]
+
+Arguments:
+  target  HTML file or project directory (default: .)
+
+Options:
+  --name <name>             Worker name (required)
+  --account <name-or-id>    Cloudflare account
+  -h, --help                Show this help`,
+  list: `Usage:
+  blueprint list [options]
+
+Options:
+  --root <path>  Scan root (default: .)
+  --json         Print JSON
+  -h, --help     Show this help`,
+  skill: `Usage:
+  blueprint skill install [options]
+
+Options:
+  --scope <user|project>  Installation scope
+  --agent <id>            Target agent; repeatable
+  --dry-run               Preview changes
+  -y, --yes               Skip confirmation
+  --force                 Replace conflicting installation
+  -h, --help              Show this help`,
+};
 
 export function parseArgs(argv: string[]): ParsedArgs {
   const [command, ...rest] = argv;
@@ -300,6 +374,28 @@ export function formatProjectList(
 }
 
 export async function main(argv: string[]): Promise<number> {
+  const helpRequested = argv.includes("-h") || argv.includes("--help");
+  if (argv.length === 0 || (argv.length === 1 && helpRequested)) {
+    process.stdout.write(`${usage}\n`);
+    return 0;
+  }
+
+  if (argv[0] === "help") {
+    if (argv.length > 2) throw new Error("help accepts at most one command");
+    const command = argv[1];
+    const text = command ? commandHelp[command] : usage;
+    if (!text) throw new Error(`unknown command: ${command}`);
+    process.stdout.write(`${text}\n`);
+    return 0;
+  }
+
+  if (helpRequested) {
+    const text = commandHelp[argv[0]];
+    if (!text) throw new Error(`unknown command: ${argv[0]}`);
+    process.stdout.write(`${text}\n`);
+    return 0;
+  }
+
   const args = parseArgs(argv);
 
   if (args.command === "--version" || args.command === "-v" || args.command === "version") {
@@ -348,6 +444,9 @@ export async function main(argv: string[]): Promise<number> {
     if (args.preset === "pitch") {
       preset = args.preset;
       entry = await createPitch(args.target, args.output);
+    } else if (args.preset === "archive") {
+      preset = args.preset;
+      entry = await createArchive(args.target, args.output);
     } else if (args.preset === "briefing") {
       preset = args.preset;
       entry = await createBriefing(args.target, args.output);
@@ -397,7 +496,7 @@ export async function main(argv: string[]): Promise<number> {
   }
 
   process.stderr.write(`${usage}\n`);
-  return args.command === undefined || args.command === "help" || args.command === "--help" ? 0 : 1;
+  return 1;
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
