@@ -1,0 +1,12 @@
+{
+  "title": "Enterprise Agent: Plugin Governance to Production Collaboration",
+  "lang": "zh-CN",
+  "theme": "dify-x",
+  "locales": [
+    {
+      "lang": "zh-CN",
+      "label": "ZH",
+      "source": "locales/zh-CN.html"
+    }
+  ]
+}

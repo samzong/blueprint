@@ -31,7 +31,7 @@ test("installs a runnable package with every preset and the bundled skill", { ti
   const { stdout: help, stderr: helpError } = await exec(executable, [], { cwd: scratch });
   assert.equal(helpError, "");
   assert.match(help, /^blueprint — agent-native web scaffolding\n\nUsage:\n  blueprint <command>/);
-  assert.match(help, /\nPresets:\n  pitch, briefing, archive/);
+  assert.match(help, /\nPresets:\n  pitch, briefing, archive, slides/);
   assert.doesNotMatch(help, /\nOptions:/);
 
   const { stdout: createHelp, stderr: createHelpError } = await exec(executable, ["create", "--help"], {
@@ -41,7 +41,7 @@ test("installs a runnable package with every preset and the bundled skill", { ti
   assert.match(createHelp, /^Usage:\n  blueprint create <preset>/);
   assert.match(createHelp, /--output <file>/);
 
-  for (const preset of ["pitch", "briefing", "archive"]) {
+  for (const preset of ["pitch", "briefing", "archive", "slides"]) {
     const project = path.join(scratch, preset);
     await cp(path.join(repository, "test", "fixtures", preset), project, { recursive: true });
     await exec(executable, ["create", preset, project], { cwd: scratch });
@@ -58,10 +58,10 @@ test("installs a runnable package with every preset and the bundled skill", { ti
 
   const { stdout: listOutput } = await exec(executable, ["list", "--root", scratch, "--json"], { cwd: scratch });
   const projects: Array<{ name: string; preset: string }> = JSON.parse(listOutput);
-  assert.equal(projects.length, 6);
+  assert.equal(projects.length, 7);
   assert.deepEqual(
     projects.map((project) => project.preset).sort(),
-    ["archive", "briefing", "dossier", "pitch", "prototype-full", "prototype-lite"],
+    ["archive", "briefing", "dossier", "pitch", "prototype-full", "prototype-lite", "slides"],
   );
 
   const installHome = path.join(scratch, "home");

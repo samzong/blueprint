@@ -3,6 +3,7 @@
 Presets use this system unless a theme overrides it:
 
 - `briefing` uses `theme-briefing.md` for colors and slide components, while retaining these typography and restraint rules.
+- `slides` uses `theme-dify-x.md` for its canvas, colors, presentation type scale, radii, and layout vocabulary, while retaining these semantic and content-restraint rules.
 - `archive` uses `theme-win98-web.md` for the full visual system.
 
 Add shared tokens here only when multiple presets need them. Preset-only values belong in its theme or source CSS.

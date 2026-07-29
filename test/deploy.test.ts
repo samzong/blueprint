@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { chmod, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { chmod, cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -8,6 +8,7 @@ import { checkEntry, main } from "../src/cli.ts";
 import { deployWorker } from "../src/deploy.ts";
 import { createPitch } from "../src/presets/pitch.ts";
 import { createScaffold } from "../src/presets/scaffold.ts";
+import { createSlides } from "../src/presets/slides.ts";
 import { recordProject } from "../src/project.ts";
 
 test("deploys only publishable assets through Wrangler and verifies its URL", async () => {
@@ -96,6 +97,14 @@ if (args[0] === "--version") {
     assert.equal(await main(["deploy", project, "--name", "blueprint-demo"]), 0);
     const managedDeployment: { files: string[] } = JSON.parse(await readFile(log, "utf8"));
     assert.deepEqual(managedDeployment.files, ["index.html"]);
+
+    const slidesProject = path.join(directory, "slides");
+    await cp(path.resolve("test/fixtures/slides"), slidesProject, { recursive: true });
+    const slidesEntry = await createSlides(slidesProject);
+    await recordProject(slidesProject, "slides", slidesEntry, "0.1.0");
+    assert.equal(await main(["deploy", slidesProject, "--name", "blueprint-slides"]), 0);
+    const slidesDeployment: { files: string[] } = JSON.parse(await readFile(log, "utf8"));
+    assert.deepEqual(slidesDeployment.files, ["index.html"]);
 
     const app = path.join(directory, "app");
     const appEntry = await createScaffold("dossier", app);

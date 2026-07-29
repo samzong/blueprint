@@ -18,6 +18,7 @@ import { checkArchiveOutput, createArchive } from "./presets/archive.ts";
 import { checkBriefingOutput, createBriefing } from "./presets/briefing.ts";
 import { checkPitchOutput, createPitch } from "./presets/pitch.ts";
 import { checkScaffoldOutput, createScaffold } from "./presets/scaffold.ts";
+import { checkSlidesOutput, createSlides } from "./presets/slides.ts";
 import { urlAttributes } from "./presets/shared.ts";
 import {
   findProject,
@@ -57,7 +58,7 @@ Commands:
   help [command]                Show help
 
 Presets:
-  pitch, briefing, archive
+  pitch, briefing, archive, slides
   prototype-lite, prototype-full, dossier
 
 Global options:
@@ -71,7 +72,7 @@ const commandHelp: Record<string, string> = {
   blueprint create <preset> [directory] [--output <file>]
 
 Presets:
-  pitch, briefing, archive
+  pitch, briefing, archive, slides
     Build one HTML file from source content
   prototype-lite
     Create a single-file React prototype
@@ -79,7 +80,7 @@ Presets:
     Create a Vite project
 
 Options:
-  --output <file>  Output path for pitch, briefing, or archive
+  --output <file>  Output path for compiled presets
   -h, --help       Show this help`,
   check: `Usage:
   blueprint check [target]
@@ -340,6 +341,9 @@ async function checkPresetOutput(
     case "archive":
       checkArchiveOutput(html, entry);
       return;
+    case "slides":
+      checkSlidesOutput(html, entry);
+      return;
     case "prototype-lite":
     case "prototype-full":
     case "dossier":
@@ -559,6 +563,7 @@ export async function main(argv: string[]): Promise<number> {
       args.preset === "pitch" ||
       args.preset === "archive" ||
       args.preset === "briefing" ||
+      args.preset === "slides" ||
       args.preset === "prototype-lite" ||
       args.preset === "prototype-full" ||
       args.preset === "dossier"
@@ -574,6 +579,9 @@ export async function main(argv: string[]): Promise<number> {
     } else if (args.preset === "briefing") {
       preset = args.preset;
       entry = await createBriefing(args.target, args.output);
+    } else if (args.preset === "slides") {
+      preset = args.preset;
+      entry = await createSlides(args.target, args.output);
     } else if (
       args.preset === "prototype-lite" ||
       args.preset === "prototype-full" ||
