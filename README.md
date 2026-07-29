@@ -12,7 +12,7 @@ Blueprint currently ships three visual theme families. Click a screenshot to ope
 | Pitch | Briefing | Archive(Win 98) |
 |---|---|---|
 | [![Lathe pitch](docs/showcase/pitch.png)](https://lathe-ai-native-pitch.samzong.workers.dev/) | [![Blueprint briefing](docs/showcase/briefing.png)](https://blueprint-session-briefing.samzong.workers.dev/) | [![Mosoo archive](docs/showcase/archive.png)](https://mosoo-product-inquiry.samzong.workers.dev/) |
-| [Lathe](https://github.com/lathe-cli/lathe) · `pitch` | [Blueprint](https://github.com/samzong/blueprint) · `briefing` | Mosoo · `archive` |
+| [Lathe](https://github.com/lathe-cli/lathe) · `pitch` | [Blueprint](https://github.com/samzong/blueprint) · `briefing` | [Mosoo](https://github.com/langgenius/mosoo) · `archive` |
 
 ## Install
 
