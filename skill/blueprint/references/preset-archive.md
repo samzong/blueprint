@@ -20,6 +20,7 @@ Use this contract for a searchable, downloadable collection of Markdown document
 - `downloadName`: ZIP filename; defaults to `<project>.zip`
 
 The compiler recursively embeds `src/docs`, ignores hidden paths and `node_modules`, places a root `README.md` first, and derives labels from the first H1 or filename. The generated file includes the theme, renderer, hash routing, search, ZIP download, and optional Mermaid loader; it must not fetch source documents at runtime.
+The archive chrome follows `lang`: Chinese projects use Chinese search, download, count, and empty-state labels; other languages use the English fallback.
 
 ## Build
 
@@ -31,6 +32,7 @@ blueprint check <project>/index.html
 ## Content rules
 
 - Use `README.md` as the landing document and one H1 per document.
+- When current and historical documents coexist, use the root `README.md` to state the source hierarchy and make clear that dated material is not the current product contract.
 - Preserve evidence labels, code fences, tables, quotes, and lists.
 - Use fenced `mermaid` blocks only when a diagram improves the document.
 - Put project-specific visual overrides in `src/style.css`.

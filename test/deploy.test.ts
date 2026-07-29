@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -34,6 +34,7 @@ if (args[0] === "--version") {
   writeFileSync(process.env.BLUEPRINT_TEST_LOG, JSON.stringify({
     account: process.env.CLOUDFLARE_ACCOUNT_ID,
     args,
+    cwd: process.cwd(),
     files: readdirSync(assets),
   }));
   writeFileSync(
@@ -64,7 +65,7 @@ if (args[0] === "--version") {
 
   try {
     const result = await deployWorker(entry, await checkEntry(entry), { name: "blueprint-demo" });
-    const deployment: { account: string; args: string[]; files: string[] } = JSON.parse(
+    const deployment: { account: string; args: string[]; cwd: string; files: string[] } = JSON.parse(
       await readFile(log, "utf8"),
     );
     const { args } = deployment;
@@ -73,6 +74,7 @@ if (args[0] === "--version") {
     assert.equal(result.account, "personal");
     assert.equal(result.url, "https://blueprint-demo.example");
     assert.equal(deployment.account, "account-id");
+    assert.equal(deployment.cwd, path.join(await realpath(os.tmpdir()), path.basename(path.dirname(assets))));
     assert.deepEqual(deployment.files, ["index.html"]);
     assert.deepEqual(args.slice(0, 5), ["deploy", "--assets", assets, "--name", "blueprint-demo"]);
     assert.ok(args.includes("--no-autoconfig"));

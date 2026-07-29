@@ -61,9 +61,9 @@ function selectAccount(accounts: Account[], requested: string | undefined): Acco
   );
 }
 
-async function runWrangler(args: string[], env?: NodeJS.ProcessEnv): Promise<void> {
+async function runWrangler(args: string[], env: NodeJS.ProcessEnv, cwd: string): Promise<void> {
   await new Promise<void>((resolve, reject) => {
-    const child = spawn("wrangler", args, { env, stdio: "inherit" });
+    const child = spawn("wrangler", args, { cwd, env, stdio: "inherit" });
     child.once("error", reject);
     child.once("exit", (code, signal) => {
       if (code === 0) resolve();
@@ -186,6 +186,7 @@ export async function deployWorker(
         WRANGLER_CACHE_DIR: cache,
         WRANGLER_OUTPUT_FILE_PATH: output,
       },
+      temporary,
     );
 
     const url = deploymentUrl(await readFile(output, "utf8"));

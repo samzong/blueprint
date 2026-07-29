@@ -1,6 +1,7 @@
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { archiveZhCNLabels } from "./archive.zh-CN.ts";
 import { escapeHtml, language, optionalFile, parseObject, requiredString } from "./shared.ts";
 
 type ArchiveConfig = {
@@ -117,7 +118,15 @@ export async function createArchive(project: string, output?: string): Promise<s
       }),
     ),
   );
-  const payload = scriptJson({ ...config, documents });
+  const labels = config.lang.toLowerCase().startsWith("zh")
+    ? archiveZhCNLabels(documents.length)
+    : {
+        count: `${documents.length} documents`,
+        download: "Download all",
+        empty: "No matching documents",
+        search: "Search documents",
+      };
+  const payload = scriptJson({ ...config, documents, labels });
   const document = `<!doctype html>
 <html lang="${escapeHtml(config.lang)}">
 <head>
@@ -137,8 +146,8 @@ ${customCss.trim()}
       <p id="doc-count"></p>
     </header>
     <div class="filter">
-      <button class="download-button" id="download" type="button">Download all</button>
-      <input id="filter" type="search" placeholder="Search documents" autocomplete="off">
+      <button class="download-button" id="download" type="button">${labels.download}</button>
+      <input id="filter" type="search" placeholder="${labels.search}" autocomplete="off">
     </div>
     <nav id="docs"></nav>
   </aside>

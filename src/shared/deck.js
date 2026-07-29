@@ -149,6 +149,7 @@
   const mobileNextButton = requireButton(mobileNav, ".mobile-deck-next");
 
   const syncAutoplayButton = () => {
+    root.classList.toggle("autoplay-enabled", autoplayRunning);
     autoplayButton.setAttribute("aria-label", autoplayRunning ? "Pause autoplay" : "Autoplay");
     autoplayButton.setAttribute("aria-pressed", String(autoplayRunning));
     requireElement(autoplayButton, ".deck-rail-tip").textContent = autoplayRunning ? "Pause" : "Autoplay";

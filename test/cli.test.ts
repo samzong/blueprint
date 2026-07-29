@@ -6,6 +6,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { checkEntry, entryUrl, formatProjectList, main, parseArgs, preview } from "../src/cli.ts";
+import { archiveZhCNLabels } from "../src/presets/archive.zh-CN.ts";
 import { createArchive } from "../src/presets/archive.ts";
 import { createBriefing } from "../src/presets/briefing.ts";
 import { createPitch } from "../src/presets/pitch.ts";
@@ -270,9 +271,29 @@ test("creates a portable pitch from semantic source files", async () => {
   assert.match(generated, /--accent: #2563eb/);
   assert.match(generated, /Build the brief/);
   assert.match(generated, /grid-template-columns: repeat\(2/);
-  assert.match(generated, /<a class="logo" href="https:\/\/github\.com\/samzong\/blueprint">blueprint<\/a>/);
+  assert.match(generated, /\.hero-facts\s*\{/);
+  assert.match(generated, /\.stack-wrap\s*\{/);
+  assert.match(generated, /\.proof-layout\s*\{/);
+  assert.match(generated, /\.terminal\s*\{/);
+  assert.match(generated, /\.starter-grid\s*\{/);
+  assert.match(generated, /<img class="brand-logo" src="data:image\/svg\+xml;base64,/);
+  assert.match(generated, /<span class="brand-name">blueprint<\/span>/);
+  assert.match(generated, /<span class="brand-tagline">Agent-native websites<\/span>/);
   assert.match(generated, /<div class="meta-tag">2026-07-27<\/div>/);
   assert.doesNotMatch(generated, /\{\{[^}]+\}\}/);
+});
+
+test("keeps pitch brand logos inside src", async () => {
+  const fixture = fileURLToPath(new URL("fixtures/pitch", import.meta.url));
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-pitch-logo-"));
+  await cp(fixture, directory, { recursive: true });
+  const configFile = path.join(directory, "src", "pitch.json");
+  const config = JSON.parse(await readFile(configFile, "utf8"));
+  config.brandLogo = "../outside.svg";
+  await writeFile(path.join(directory, "outside.svg"), "<svg xmlns=\"http://www.w3.org/2000/svg\"/>");
+  await writeFile(configFile, JSON.stringify(config));
+
+  await assert.rejects(createPitch(directory), /brandLogo must stay inside the project src directory/);
 });
 
 test("creates a portable archive from a Markdown corpus", async () => {
@@ -286,6 +307,10 @@ test("creates a portable archive from a Markdown corpus", async () => {
   assert.equal(await checkEntry(entry), entry);
   assert.match(generated, /const ARCHIVE =/);
   assert.match(generated, /#c0c0c0/);
+  assert.match(generated, />Download all<\/button>/);
+  assert.match(generated, /placeholder="Search documents"/);
+  assert.match(generated, /"empty":"No matching documents"/);
+  assert.match(generated, /"count":"2 documents"/);
   assert.ok(generated.includes("guides/01-guide.md"));
   assert.ok(generated.includes("\\u003c/script>"));
   assert.match(generated, /location\.hash/);
@@ -305,6 +330,25 @@ return inlineMarkdown(value);`,
     renderInline("[docs](https://example.com/s?a=1&b=2)"),
     '<a href="https://example.com/s?a=1&amp;b=2" target="_blank" rel="noreferrer">docs</a>',
   );
+});
+
+
+test("localizes archive chrome for Chinese projects", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-archive-zh-"));
+  const docs = path.join(directory, "src", "docs");
+  await mkdir(docs, { recursive: true });
+  await writeFile(
+    path.join(directory, "src", "archive.json"),
+    JSON.stringify({ lang: "zh-CN", title: "Archive" }),
+  );
+  await writeFile(path.join(docs, "README.md"), "# Archive\n");
+
+  const labels = archiveZhCNLabels(1);
+  const generated = await readFile(await createArchive(directory), "utf8");
+  assert.match(generated, new RegExp(`>${labels.download}</button>`));
+  assert.match(generated, new RegExp(`placeholder="${labels.search}"`));
+  assert.match(generated, new RegExp(`"empty":"${labels.empty}"`));
+  assert.match(generated, new RegExp(`"count":"${labels.count}"`));
 });
 
 test("archive accepts documentation containing local URLs and template syntax", async () => {
@@ -429,6 +473,7 @@ test("scaffolds dossier and prototype-full from the shared template", async () =
 
   const dossierPackage = JSON.parse(await readFile(path.join(dossier, "package.json"), "utf8"));
   const dossierApp = await readFile(path.join(dossier, "src", "App.tsx"), "utf8");
+  const dossierCss = await readFile(path.join(dossier, "src", "index.css"), "utf8");
   const prototypeApp = await readFile(path.join(prototype, "src", "App.tsx"), "utf8");
   const viteTypes = await readFile(path.join(dossier, "src", "vite-env.d.ts"), "utf8");
   const workspace = await readFile(path.join(dossier, "pnpm-workspace.yaml"), "utf8");
@@ -437,6 +482,10 @@ test("scaffolds dossier and prototype-full from the shared template", async () =
   assert.match(viteTypes, /vite\/client/);
   assert.match(dossierApp, /My Dossier/);
   assert.match(dossierApp, />Dossier</);
+  assert.match(dossierCss, /@import "tailwindcss" source\(none\)/);
+  assert.match(dossierCss, /@source "\.\/"/);
+  assert.match(dossierCss, /input:focus-visible/);
+  assert.match(dossierCss, /min-height: 42px/);
   assert.match(prototypeApp, />Prototype</);
   assert.equal(await checkEntry(dossier), path.join(dossier, "index.html"));
 });
