@@ -11,6 +11,7 @@ import { createArchive } from "../src/presets/archive.ts";
 import { createBriefing } from "../src/presets/briefing.ts";
 import { createPitch } from "../src/presets/pitch.ts";
 import { createScaffold } from "../src/presets/scaffold.ts";
+import { checkSlidesOutput, createSlides } from "../src/presets/slides.ts";
 import { language, validateFragment } from "../src/presets/shared.ts";
 import { recordProject } from "../src/project.ts";
 
@@ -379,6 +380,162 @@ test("creates a portable briefing with the shared deck runtime", async () => {
   assert.match(generated, /\.metric \{/);
 });
 
+
+test("creates portable Reveal slides with a Dify-X theme", async () => {
+  const fixture = fileURLToPath(new URL("fixtures/slides", import.meta.url));
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-slides-"));
+  const output = path.join(directory, "index.html");
+
+  const entry = await createSlides(fixture, output);
+  const generated = await readFile(entry, "utf8");
+
+  assert.equal(await checkEntry(entry), entry);
+  checkSlidesOutput(generated, entry);
+  assert.throws(
+    () => checkSlidesOutput(generated.replace("<section", '<section data-background="assets/brand.svg"'), entry),
+    /data-background is not supported/,
+  );
+  assert.match(generated, /data-blueprint-preset="slides"/);
+  assert.match(generated, /data-blueprint-theme="dify-x"/);
+  assert.match(generated, /6\.0\.1/);
+  assert.match(generated, /RevealNotes/);
+  assert.match(generated, /plugins: \[RevealNotes\]/);
+  assert.match(generated, /class="slides-shortcuts"/);
+  assert.match(generated, /70: toggleFullscreen/);
+  assert.match(generated, /document\.exitFullscreen/);
+  assert.match(generated, /Promise\.resolve\(method\.call\(owner\)\)\.catch\(\(\) => \{\}\)/);
+  assert.match(generated, /Enter \/ exit fullscreen/);
+  assert.match(generated, /data:image\/svg\+xml;base64,/);
+  assert.doesNotMatch(generated, /assets\/brand\.svg/);
+  assert.match(generated, /\.cover-layout \{/);
+  assert.match(generated, /\.architecture \{/);
+  assert.match(generated, /\.evidence-layout \{/);
+  assert.match(generated, /\.matrix \{/);
+  assert.match(generated, /\.source-note \{/);
+  assert.match(generated, /\.slides-chrome \{/);
+  assert.doesNotMatch(generated, /class="slides-chrome"/);
+});
+
+test("adds optional brand chrome and portable language switching", async () => {
+  const fixture = fileURLToPath(new URL("fixtures/slides", import.meta.url));
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-slides-locales-"));
+  await cp(fixture, directory, { recursive: true });
+  const sourceDirectory = path.join(directory, "src");
+  const source = await readFile(path.join(sourceDirectory, "locales", "zh-CN.html"), "utf8");
+  await writeFile(path.join(sourceDirectory, "locales", "en.html"), source);
+  await writeFile(
+    path.join(sourceDirectory, "slides.json"),
+    JSON.stringify({
+      title: "Enterprise Agent",
+      lang: "zh-CN",
+      theme: "dify-x",
+      brand: {
+        label: "Governance × Operations",
+        logos: [{ src: "assets/brand.svg", alt: "Blueprint" }],
+      },
+      locales: [
+        { lang: "zh-CN", label: "ZH", source: "locales/zh-CN.html", title: "Enterprise Agent" },
+        { lang: "en", label: "EN", source: "locales/en.html", title: "Enterprise Agent" },
+      ],
+    }),
+  );
+
+  const entry = await createSlides(directory);
+  const generated = await readFile(entry, "utf8");
+
+  assert.match(generated, /class="slides-chrome"/);
+  assert.match(generated, /class="deck-brand"/);
+  assert.match(generated, /Governance × Operations/);
+  assert.match(generated, /data-slides-lang-link="en"/);
+  assert.match(generated, /template data-slides-lang="en"/);
+  assert.match(generated, /blueprintSlideLocales/);
+  assert.match(generated, /replaceChildren\(template\.content\.cloneNode\(true\)\)/);
+  assert.match(generated, /data:image\/svg\+xml;base64,/);
+  assert.doesNotMatch(generated, /assets\/brand\.svg/);
+
+  const brokenLocale = generated.replace(/(<template data-slides-lang="en">\s*)<section>/, "$1<div>");
+  assert.throws(() => checkSlidesOutput(brokenLocale, entry), /locale en: slides must contain only top-level <section>/);
+});
+
+test("rejects invalid slides themes, wrappers, and local CSS assets", async () => {
+  const fixture = fileURLToPath(new URL("fixtures/slides", import.meta.url));
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-slides-invalid-"));
+  await cp(fixture, directory, { recursive: true });
+
+  await writeFile(path.join(directory, "src", "slides.json"), '{"title":"Invalid","theme":"missing"}\n');
+  await assert.rejects(createSlides(directory), /unknown theme "missing"/);
+
+  await writeFile(path.join(directory, "src", "slides.json"), '{"title":"Invalid","theme":"dify-x"}\n');
+  await writeFile(path.join(directory, "src", "slides.html"), '<div class="reveal"><section>Wrapped</section></div>\n');
+  await assert.rejects(createSlides(directory), /only top-level <section>/);
+
+  await writeFile(path.join(directory, "src", "slides.html"), '<section><h1>Slide</h1></section>\n');
+  await writeFile(path.join(directory, "src", "style.css"), '.hero { background: url("assets/brand.svg"); }\n');
+  await assert.rejects(createSlides(directory), /local CSS assets are not supported/);
+
+  await writeFile(path.join(directory, "src", "style.css"), '@import "assets/theme.css";\n');
+  await assert.rejects(createSlides(directory), /CSS imports are not supported/);
+
+  await writeFile(path.join(directory, "src", "style.css"), '@\\69mport "assets/theme.css";\n');
+  await assert.rejects(createSlides(directory), /CSS escape sequences are not supported/);
+
+  await writeFile(path.join(directory, "src", "style.css"), 'body { background: image-set("assets/theme.png" 1x); }\n');
+  await assert.rejects(createSlides(directory), /CSS image sets are not supported/);
+
+  await writeFile(
+    path.join(directory, "src", "slides.html"),
+    '<section data-background-iframe="javascript:alert(1)">Unsafe</section>\n',
+  );
+  await writeFile(path.join(directory, "src", "style.css"), "");
+  await assert.rejects(createSlides(directory), /unsafe URL in data-background-iframe/);
+
+  await writeFile(path.join(directory, "src", "slides.html"), '<section data-background="assets/brand.svg">Unsafe</section>\n');
+  await assert.rejects(createSlides(directory), /data-background is not supported/);
+
+  await writeFile(
+    path.join(directory, "src", "slides.html"),
+    '<section data-background-gradient="url(assets/brand.svg)">Unsafe</section>\n',
+  );
+  await assert.rejects(createSlides(directory), /local CSS assets are not supported/);
+
+  for (const attribute of ["data-src", "data-preview-image", "data-preview-video", "data-preview-link", "data-notes"]) {
+    await writeFile(path.join(directory, "src", "slides.html"), `<section ${attribute}="https://example.com/asset">Unsafe</section>\n`);
+    await assert.rejects(createSlides(directory), new RegExp(`${attribute} is not supported`));
+  }
+  for (const attribute of ["data-background-image", "data-background-video"]) {
+    await writeFile(path.join(directory, "src", "slides.html"), `<section ${attribute}="https://example.com/asset, assets/missing">Unsafe</section>\n`);
+    await assert.rejects(createSlides(directory), new RegExp(`${attribute} must contain one URL`));
+  }
+  await writeFile(path.join(directory, "src", "slides.html"), '<section data-background-image="data:image/svg+xml,x),url(assets/missing.png">Unsafe</section>\n');
+  await assert.rejects(createSlides(directory), /data-background-image must contain one URL/);
+
+  await writeFile(path.join(directory, "src", "slides.html"), "<section><h1>Slide</h1></section>\n");
+  await writeFile(
+    path.join(directory, "src", "slides.json"),
+    JSON.stringify({
+      title: "Invalid",
+      theme: "dify-x",
+      brand: { logos: [{ src: "https://example.com/logo.svg", alt: "Remote" }] },
+    }),
+  );
+  await assert.rejects(createSlides(directory), /brand logo must be a local image/);
+
+  await writeFile(path.join(directory, "src", "slides.en.html"), "<section>One</section><section>Two</section>\n");
+  await writeFile(
+    path.join(directory, "src", "slides.json"),
+    JSON.stringify({
+      title: "Invalid",
+      lang: "en",
+      theme: "dify-x",
+      locales: [
+        { lang: "en", label: "EN", source: "slides.html" },
+        { lang: "zh-CN", label: "ZH", source: "slides.en.html" },
+      ],
+    }),
+  );
+  await assert.rejects(createSlides(directory), /must match the default slide topology/);
+});
+
 test("parses pitch creation without widening other commands", () => {
   assert.deepEqual(parseArgs(["create", "pitch", "demo", "--output", "dist/index.html"]), {
     command: "create",
@@ -552,6 +709,20 @@ test("managed check enforces briefing slide chrome", async () => {
   html = html.replace(/\bslide-num\b/g, "slide-number");
   await writeFile(entry, html);
   await assert.rejects(checkEntry(entry), /missing \.slide-num/);
+});
+
+
+test("managed check enforces the slides runtime and portable output", async () => {
+  const fixture = fileURLToPath(new URL("fixtures/slides", import.meta.url));
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-check-slides-"));
+  const entry = await createSlides(fixture, path.join(directory, "index.html"));
+  await recordProject(directory, "slides", entry, "0.1.0");
+
+  const html = await readFile(entry, "utf8");
+  await writeFile(entry, html.replace("Reveal.initialize({", "Reveal.start({"));
+  await assert.rejects(checkEntry(entry), /missing Reveal\.js runtime/);
+  await writeFile(entry, html.replace("</style>", '@import "assets/missing.css";</style>'));
+  await assert.rejects(checkEntry(entry), /CSS imports are not supported/);
 });
 
 test("managed check enforces archive shell and payload", async () => {

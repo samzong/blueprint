@@ -1,0 +1,49 @@
+.cover-visual img {
+  padding: 150px;
+  object-fit: contain;
+}
+
+.cover-visual-label {
+  position: absolute;
+  right: 34px;
+  bottom: 30px;
+  color: rgba(255, 255, 255, 0.72);
+  font: 700 14px/1.4 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.card-grid.six-up {
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+.card-grid.compact .card {
+  padding: 22px;
+}
+
+.card-grid.compact .card-index {
+  margin-bottom: 0;
+}
+
+.card-grid.compact .card h3 {
+  margin: 18px 0 8px;
+  font-size: 24px;
+}
+
+.card-grid.compact .card p {
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.timeline.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.panel h3 {
+  margin-bottom: 18px;
+}
+
+.panel p + p {
+  margin-top: 16px;
+}

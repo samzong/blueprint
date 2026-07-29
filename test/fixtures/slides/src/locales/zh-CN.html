@@ -1,0 +1,393 @@
+<section>
+  <div class="slide-shell">
+    <div class="cover-layout">
+      <div class="cover-copy">
+        <span class="eyebrow">Dify-X × Blueprint Simulation</span>
+        <h1>企业 Agent<br><span class="emphasis">从插件治理<br>到生产协作</span></h1>
+        <p class="lede">基于 Dify-X 最新 29 页分享，压缩为一套可完整演示的 16 页 Reveal deck。</p>
+        <div class="cover-meta">
+          <span class="tag">Dify 1.16.1</span>
+          <span>2026.07.29</span>
+          <span>dify-x@344a782</span>
+        </div>
+      </div>
+      <div class="cover-visual">
+        <img src="assets/brand.svg" alt="Blueprint mark">
+        <div class="cover-visual-label">HTML sections<br>Reveal.js runtime<br>Dify-X theme</div>
+      </div>
+    </div>
+  </div>
+  <aside class="notes">这是一套用于验证 Blueprint slides preset 的模拟演示。内容主线来自 Dify-X 2026-07-29 更新的《企业 Agent：从插件治理到生产协作》，不是原始 29 页演示的逐页复制。</aside>
+</section>
+
+<section>
+  <div class="slide-shell">
+    <div class="slide-header">
+      <div>
+        <span class="eyebrow">Plugin Governance</span>
+        <h2>装上一个插件，等于同时放开三类权限。</h2>
+        <p class="lede">治理入口不是“功能好不好用”，而是代码能执行什么、数据会流向哪里、网络能访问谁。</p>
+      </div>
+      <span class="chip">01</span>
+    </div>
+    <div class="card-grid cols-3">
+      <article class="card fragment">
+        <span class="card-index">CODE</span>
+        <h3>代码执行</h3>
+        <p>依赖、二进制、构建脚本和运行时权限共同决定实际能力。</p>
+      </article>
+      <article class="card fragment">
+        <span class="card-index">DATA</span>
+        <h3>数据访问</h3>
+        <p>输入、文件、知识库、凭据和日志都可能进入插件处理链路。</p>
+      </article>
+      <article class="card fragment">
+        <span class="card-index">NETWORK</span>
+        <h3>网络连接</h3>
+        <p>第三方 API、回调和出站访问会把本地风险扩展到外部系统。</p>
+      </article>
+    </div>
+  </div>
+  <aside class="notes">这一页建立治理起点。后续所有门禁都从权限和数据流出发，不从作者身份或市场描述出发。</aside>
+</section>
+
+<section>
+  <section>
+    <div class="slide-shell">
+      <div class="slide-header">
+        <div>
+          <span class="eyebrow">Lifecycle</span>
+          <h2>一次审核通过，只能证明当时没有查出问题。</h2>
+          <p class="lede">版本、依赖、凭据和外部 API 都会变化，治理必须覆盖完整生命周期。</p>
+        </div>
+        <span class="chip">02A</span>
+      </div>
+      <div class="timeline">
+        <article class="timeline-item">
+          <span class="timeline-time">SUBMIT</span>
+          <h3>提交</h3>
+          <p>声明权限、依赖、数据行为与发布材料。</p>
+        </article>
+        <article class="timeline-item">
+          <span class="timeline-time">VERIFY</span>
+          <h3>验证</h3>
+          <p>机器扫描稳定规则，人工判断上下文与例外。</p>
+        </article>
+        <article class="timeline-item">
+          <span class="timeline-time">RUN</span>
+          <h3>运行</h3>
+          <p>记录调用、网络去向、异常和策略命中证据。</p>
+        </article>
+        <article class="timeline-item">
+          <span class="timeline-time">RESPOND</span>
+          <h3>处置</h3>
+          <p>升级、撤回、下架和申诉都必须有明确 SLA。</p>
+        </article>
+      </div>
+    </div>
+    <aside class="notes">版本会变化，依赖会出现新漏洞，作者凭证也可能失效。治理不能停在上架前的一次 CI。</aside>
+  </section>
+
+  <section>
+    <div class="slide-shell">
+      <div class="slide-header">
+        <div>
+          <span class="eyebrow">Enterprise Review</span>
+          <h2>企业放行一个插件，需要六类角色共享同一份证据。</h2>
+        </div>
+        <span class="chip">02B</span>
+      </div>
+      <div class="card-grid cols-3 six-up compact">
+        <article class="card"><span class="card-index">01</span><h3>安全</h3><p>权限、依赖、供应链与攻击面。</p></article>
+        <article class="card"><span class="card-index">02</span><h3>法务</h3><p>数据角色、许可、地域和留存责任。</p></article>
+        <article class="card"><span class="card-index">03</span><h3>产品</h3><p>用户承诺、授权提示和失败体验。</p></article>
+        <article class="card"><span class="card-index">04</span><h3>工程</h3><p>可复现检查、隔离、升级和回滚。</p></article>
+        <article class="card"><span class="card-index">05</span><h3>运营</h3><p>审核队列、申诉、监测和处置 SLA。</p></article>
+        <article class="card"><span class="card-index">06</span><h3>商业</h3><p>客户边界、第三方依赖和责任归属。</p></article>
+      </div>
+    </div>
+    <aside class="notes">六类角色不是六条独立流程。它们必须共享一份证据模型，才能避免重复审核和责任断点。</aside>
+  </section>
+</section>
+
+<section>
+  <div class="slide-shell">
+    <div class="slide-header">
+      <div>
+        <span class="eyebrow">Trust Center</span>
+        <h2>可信不是一句“更安全”，而是一条可复核的证据链。</h2>
+      </div>
+      <span class="chip">03</span>
+    </div>
+    <div class="architecture">
+      <div class="architecture-node primary span-12">
+        <div><span class="kicker">Shared evidence model</span><h3>权限、数据、依赖、版本和处置记录使用同一份事实</h3></div>
+        <strong class="mono">SOURCE OF TRUTH</strong>
+      </div>
+      <div class="architecture-node span-4 status-positive"><div><h3>L1 · 低风险</h3><p>稳定规则自动放行，保留机器证据。</p></div></div>
+      <div class="architecture-node span-4 status-caution"><div><h3>L2 · 中风险</h3><p>补充上下文、数据流和人工复核。</p></div></div>
+      <div class="architecture-node span-4 status-danger"><div><h3>L3 · 高风险</h3><p>最小权限、隔离运行、持续监测。</p></div></div>
+      <div class="architecture-node span-4"><div><h3>用户可见</h3><p>权限与数据去向不藏在条款里。</p></div></div>
+      <div class="architecture-node span-4"><div><h3>企业可复核</h3><p>检查方法、版本和结果可以重放。</p></div></div>
+      <div class="architecture-node span-4"><div><h3>作者可修复</h3><p>失败原因定位到文件、规则和动作。</p></div></div>
+    </div>
+  </div>
+  <aside class="notes">风险分级必须同时优化安全和生态体验。低风险不应承担 L3 成本，高风险也不能靠一次人工判断上线。</aside>
+</section>
+
+<section class="dark" data-background-image="assets/brand.svg" data-background-size="190px" data-background-repeat="no-repeat" data-background-position="88% 50%" data-background-opacity="0.12">
+  <div class="section-intro">
+    <div class="section-number">02</div>
+    <div class="section-copy">
+      <span class="eyebrow">From Boundary to Collaboration</span>
+      <h2>边界清楚，协作才放得开。</h2>
+      <p class="lede">治理不是 Agent 的刹车；它是把自主能力带进生产环境的前提。</p>
+    </div>
+  </div>
+  <aside class="notes">前半段建立插件治理边界，后半段把这些边界放回 Dify 1.15 到 1.16.1 的产品演进中。</aside>
+</section>
+
+<section>
+  <div class="slide-shell">
+    <div class="slide-header">
+      <div>
+        <span class="eyebrow">Release Arc</span>
+        <h2>三次更新形成一条从扩展入口到生产可信的路径。</h2>
+      </div>
+      <span class="chip">04</span>
+    </div>
+    <div class="timeline three">
+      <article class="timeline-item">
+        <span class="timeline-time">1.15.0</span>
+        <h3>入口扩大</h3>
+        <p>difyctl、结构化 HITL、可观测能力和安全修复扩展了应用调用与运营入口。</p>
+      </article>
+      <article class="timeline-item">
+        <span class="timeline-time">1.16.0</span>
+        <h3>Agent 成为系统</h3>
+        <p>Linux sandbox、Skills、Agent roster、Workflow 引用和 Web App 进入同一条构建路径。</p>
+      </article>
+      <article class="timeline-item">
+        <span class="timeline-time">1.16.1</span>
+        <h3>补齐生产边界</h3>
+        <p>Sandbox 网络隔离、服务认证、状态一致性和增量迁移收紧运行边界。</p>
+      </article>
+    </div>
+  </div>
+  <aside class="notes">版本事实依据 Dify 官方 1.15.0、1.16.0、1.16.1 release notes。这里保留主线，不复述完整功能清单。</aside>
+</section>
+
+<section>
+  <div class="slide-shell">
+    <div class="slide-header">
+      <div>
+        <span class="eyebrow">Agent System</span>
+        <h2>从 Builder 到 Web App，构建、复用和交付进入同一套系统。</h2>
+      </div>
+      <span class="chip">05</span>
+    </div>
+    <div class="architecture">
+      <div class="architecture-node span-4"><div><span class="kicker">Build</span><h3>Builder Agent</h3><p>通过对话配置环境、Skills、文件和工具。</p></div></div>
+      <div class="architecture-node span-4"><div><span class="kicker">Manage</span><h3>Agent Roster</h3><p>管理可复用角色与工作区资产。</p></div></div>
+      <div class="architecture-node span-4"><div><span class="kicker">Compose</span><h3>Workflow Node</h3><p>引用已有 Agent 或创建 inline Agent。</p></div></div>
+      <div class="architecture-node primary span-12">
+        <div><span class="kicker">Runtime contract</span><h3>Dify Agent</h3><p>角色配置、能力包、执行环境、状态和发布身份被统一管理。</p></div>
+        <strong class="mono">SYSTEM</strong>
+      </div>
+      <div class="architecture-node span-4"><div><span class="kicker">Execute</span><h3>Linux Sandbox</h3><p>运行代码、Shell 命令和 Skills。</p></div></div>
+      <div class="architecture-node span-4"><div><span class="kicker">Connect</span><h3>Tools + Knowledge</h3><p>复用 Dify 生态内能力和数据。</p></div></div>
+      <div class="architecture-node span-4"><div><span class="kicker">Deliver</span><h3>Web App</h3><p>把 Agent 直接发布给最终用户。</p></div></div>
+    </div>
+  </div>
+  <aside class="notes">1.16.0 的重点不是多一个页面，而是构建、资产、编排、运行和交付被连接起来。</aside>
+</section>
+
+<section>
+  <div class="slide-shell">
+    <div class="slide-header">
+      <div>
+        <span class="eyebrow">Runtime Package</span>
+        <h2>企业要管理的不是一段 Prompt，而是一套角色运行包。</h2>
+      </div>
+      <span class="chip">06</span>
+    </div>
+    <div class="card-grid cols-3 six-up compact">
+      <article class="card"><span class="card-index">ROLE</span><h3>Base Prompt</h3><p>目标、边界、输出契约与版本。</p></article>
+      <article class="card"><span class="card-index">CAPABILITY</span><h3>Skills</h3><p>可复用 SOP、工具调用和依赖。</p></article>
+      <article class="card"><span class="card-index">ACTION</span><h3>Tools</h3><p>外部 API、凭据与权限范围。</p></article>
+      <article class="card"><span class="card-index">CONTEXT</span><h3>Files</h3><p>输入材料、生成文件和留存规则。</p></article>
+      <article class="card"><span class="card-index">DATA</span><h3>Knowledge</h3><p>检索来源、租户边界和审计证据。</p></article>
+      <article class="card"><span class="card-index">ENV</span><h3>Sandbox</h3><p>软件、网络、资源和执行隔离。</p></article>
+    </div>
+  </div>
+  <aside class="notes">管理对象扩大后，Prompt、Skills、工具、文件、知识和 Sandbox 都必须进入版本与权限体系。</aside>
+</section>
+
+<section>
+  <div class="slide-shell">
+    <div class="slide-header">
+      <div>
+        <span class="eyebrow">Division of Work</span>
+        <h2>Agent 负责探索执行，Workflow 负责状态与证据。</h2>
+      </div>
+      <span class="chip">07</span>
+    </div>
+    <div class="split">
+      <article class="panel">
+        <span class="eyebrow">Agent</span>
+        <h3>面向不确定性</h3>
+        <p><strong>自主拆解：</strong>选择工具、调整路径、处理局部失败。</p>
+        <p><strong>交付结果：</strong>按节点契约返回结构化输出与执行证据。</p>
+      </article>
+      <article class="panel">
+        <span class="eyebrow">Workflow</span>
+        <h3>面向可控性</h3>
+        <p><strong>管理状态：</strong>输入、HITL、重试、超时、归档和下一步。</p>
+        <p><strong>固定边界：</strong>决定 Agent 何时运行、能拿到什么、结果交给谁。</p>
+      </article>
+    </div>
+  </div>
+  <aside class="notes">Agent 和 Workflow 不是替代关系。一个处理开放执行，一个管理稳定契约和系统状态。</aside>
+</section>
+
+<section>
+  <div class="slide-shell">
+    <div class="slide-header">
+      <div>
+        <span class="eyebrow">Generate + Connect</span>
+        <h2>生成降低搭建成本，协议把交付边界变得可控。</h2>
+        <p class="lede">AI Workflow Generation 负责从意图到节点配置，MCP 负责版本协商、结构化输出和逐请求身份透传。</p>
+      </div>
+      <span class="chip">08</span>
+    </div>
+    <div class="flow">
+      <article class="flow-step"><span class="step-number">01</span><div><h3>Intent</h3><p>描述目标与约束。</p></div></article>
+      <div class="flow-arrow">→</div>
+      <article class="flow-step"><span class="step-number">02</span><div><h3>Plan</h3><p>先确认节点计划。</p></div></article>
+      <div class="flow-arrow">→</div>
+      <article class="flow-step"><span class="step-number">03</span><div><h3>Generate</h3><p>并行生成节点配置。</p></div></article>
+      <div class="flow-arrow">→</div>
+      <article class="flow-step"><span class="step-number">04</span><div><h3>Govern</h3><p>人确认权限与例外。</p></div></article>
+    </div>
+  </div>
+  <aside class="notes">Dify 1.16.0 增强 /create 与 /refine 生成流程，同时升级 workflow-as-MCP 到 2025-06-18，支持结构化输出和动态请求头。</aside>
+</section>
+
+<section class="dark">
+  <div class="slide-shell">
+    <div class="slide-header">
+      <div>
+        <span class="eyebrow">Sandbox Boundary</span>
+        <h2>把任意代码执行的爆炸半径限制在最小网络路径内。</h2>
+      </div>
+      <span class="chip">09</span>
+    </div>
+    <div class="architecture">
+      <div class="architecture-node span-4"><div><span class="kicker">Control</span><h3>Dify API</h3><p>发起任务并保留业务身份。</p></div></div>
+      <div class="architecture-node primary span-4"><div><span class="kicker">Auth</span><h3>Agent Backend</h3><p>通过服务 token 建立内部边界。</p></div></div>
+      <div class="architecture-node span-4"><div><span class="kicker">Execute</span><h3>Local Sandbox</h3><p>运行 Shell、代码与 Skills。</p></div></div>
+      <div class="architecture-node primary span-12">
+        <div><span class="kicker">Dedicated egress</span><h3>Squid Forward Proxy + Strict ACL</h3><p>Sandbox 不直接进入默认网络，只能走受控代理。</p></div>
+        <strong class="mono">ALLOWLIST</strong>
+      </div>
+      <div class="architecture-node span-6"><div><h3>/files/</h3><p>短期令牌保护的文件路径。</p></div></div>
+      <div class="architecture-node span-6"><div><h3>/agent-stub/</h3><p>短期令牌保护的 Agent 接口。</p></div></div>
+    </div>
+  </div>
+  <aside class="notes">Dify 1.16.1 将 local_sandbox 移出默认网络，增加专用 Squid 代理和严格 ACL，并给 API 与 agent_backend 增加 token 认证。</aside>
+</section>
+
+<section>
+  <div class="slide-shell">
+    <div class="slide-header">
+      <div>
+        <span class="eyebrow">Reliability + Observability</span>
+        <h2>状态一致、问题可定位、成本可归属，Agent 才真正可运营。</h2>
+      </div>
+      <span class="chip">10</span>
+    </div>
+    <div class="card-grid cols-3">
+      <article class="card">
+        <span class="card-index">STATE</span>
+        <h3>状态一致</h3>
+        <p>保存、断线、重连和后台任务必须给出明确结果，不能覆盖最新编辑。</p>
+      </article>
+      <article class="card">
+        <span class="card-index">TRACE</span>
+        <h3>链路定位</h3>
+        <p>从信号到节点、运行详情和知识处理，故障证据能够逐层下钻。</p>
+      </article>
+      <article class="card">
+        <span class="card-index">FINOPS</span>
+        <h3>成本归属</h3>
+        <p>用量必须映射到 Agent、应用和提供方，才能进入容量与预算管理。</p>
+      </article>
+    </div>
+  </div>
+  <aside class="notes">生产协作最危险的不是明确失败，而是用户以为保存或执行成功。可观测链同时服务故障恢复和 FinOps。</aside>
+</section>
+
+<section>
+  <div class="slide-shell">
+    <div class="slide-header">
+      <div>
+        <span class="eyebrow">Target Operating Model</span>
+        <h2>目标、执行、状态和边界，必须各有主人。</h2>
+      </div>
+      <span class="chip">11</span>
+    </div>
+    <div class="card-grid cols-4">
+      <article class="card"><span class="card-index">WHY</span><h3>Human</h3><p>定义目标，确认高风险判断，对最终结果负责。</p></article>
+      <article class="card"><span class="card-index">DO</span><h3>Agent</h3><p>探索路径、调用工具、执行任务并交付证据。</p></article>
+      <article class="card"><span class="card-index">STATE</span><h3>Workflow</h3><p>管理输入、状态、HITL、重试和交付顺序。</p></article>
+      <article class="card"><span class="card-index">BOUNDARY</span><h3>Governance</h3><p>管理权限、政策、审计、例外和处置程序。</p></article>
+    </div>
+  </div>
+  <aside class="notes">任何生产场景都应把四类责任映射到具体 owner。空白或重叠都会在事故中变成责任断点。</aside>
+</section>
+
+<section>
+  <div class="slide-shell">
+    <div class="slide-header">
+      <div>
+        <span class="eyebrow">Execution Roadmap</span>
+        <h2>先安全升级，再治理 Agent 资产，最后规模化运营。</h2>
+      </div>
+      <span class="chip">12</span>
+    </div>
+    <div class="timeline three">
+      <article class="timeline-item">
+        <span class="timeline-time">30 DAYS</span>
+        <h3>收紧底层边界</h3>
+        <p>升级 1.16.1、替换默认 token、执行迁移、盘点插件与 Agent 权限。</p>
+      </article>
+      <article class="timeline-item">
+        <span class="timeline-time">90 DAYS</span>
+        <h3>资产进入治理</h3>
+        <p>让 Prompt、Skills、工具、发布状态和引用关系可版本化、可审计。</p>
+      </article>
+      <article class="timeline-item">
+        <span class="timeline-time">365 DAYS</span>
+        <h3>建立持续运营</h3>
+        <p>持续信任、接口策略、可靠性指标、容量与成本共同进入运营体系。</p>
+      </article>
+    </div>
+  </div>
+  <aside class="notes">路线必须从底层边界开始。直接追求 Agent 数量和自动化率，会把未解决的权限与可靠性问题一起放大。</aside>
+</section>
+
+<section>
+  <div class="closing">
+    <div class="closing-mark">B</div>
+    <span class="eyebrow">Boundary × Evidence × Operations</span>
+    <h2>边界清楚，<span class="emphasis">自主才可控。</span><br>证据完整，协作才可规模化。</h2>
+    <p class="lede">同一份 HTML sections，可以由 Agent 持续改写内容；Reveal runtime、主题、快捷键和单文件部署由 Blueprint 管理。</p>
+    <p class="source-note">
+      Source:
+      <a href="https://github.com/crazywoola/dify-x/tree/main/agent-plugin-governance">Dify-X Agent Governance</a>
+      ·
+      <a href="https://github.com/langgenius/dify/releases/tag/1.16.1">Dify 1.16.1</a>
+    </p>
+  </div>
+  <aside class="notes">总结：治理与生产协作不是两个话题。边界、证据和持续运营决定自主能力能否安全扩大。这个示例同时验证 Blueprint 的主题、布局、Notes、fragments、纵向章节和单文件编译能力。</aside>
+</section>

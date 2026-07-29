@@ -7,7 +7,7 @@ blueprint turns a conversational web brief into deterministic, portable output.
 
 ## Showcase
 
-Blueprint currently ships three visual theme families. Click a screenshot to open the live output.
+Blueprint currently ships four visual theme families. Click a screenshot to open the live output.
 
 | Pitch | Briefing | Archive(Win 98) |
 |---|---|---|
@@ -45,6 +45,7 @@ Available presets:
 |---|---|
 | `pitch` | Compiled single-file story |
 | `briefing` | Compiled single-file slide deck |
+| `slides` | Compiled single-file Reveal.js presentation with themes, optional brand/language chrome, and speaker notes |
 | `archive` | Compiled searchable Markdown reader |
 | `prototype-lite` | Single-file React prototype |
 | `prototype-full` | Vite + React + TypeScript prototype |
@@ -65,7 +66,7 @@ blueprint deploy .local/demo --name repo-task
 
 `deploy` validates a managed project, publishes it through Cloudflare Workers Static Assets, verifies the URL, and records the result in `.blueprint.json`.
 
-Single-file presets may be deployed from the project directory. For `prototype-full` and `dossier`, run `pnpm build` in the project and deploy its `dist` directory.
+Single-file presets, including `slides`, may be deployed from the project directory. For `prototype-full` and `dossier`, run `pnpm build` in the project and deploy its `dist` directory.
 
 `--account` is usually unnecessary. blueprint reuses the recorded account, `CLOUDFLARE_ACCOUNT_ID`, or the only available account. The bundled skill derives Worker names as `<repo-name>-<task-name>` inside a Git repository and `<task-name>` elsewhere.
 

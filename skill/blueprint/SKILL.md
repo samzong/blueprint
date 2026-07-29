@@ -2,7 +2,7 @@
 name: blueprint
 description: >
   Create, rebuild, validate, preview, discover, and deploy blueprint-managed
-  web projects using pitch, briefing, archive, prototype, or dossier presets.
+  web projects using pitch, briefing, slides, archive, prototype, or dossier presets.
   Use when the user mentions blueprint, asks to create a page, demo, deck,
   report, or Markdown archive, or wants to check, preview, list, or publish an
   existing blueprint project. Do not use for unrelated web projects or
@@ -35,6 +35,7 @@ Ask at most one blocking question and only for missing information that changes 
 | Intent | Preset |
 |---|---|
 | Investor pitch, product introduction, landing page | `pitch` |
+| Stage presentation, conference talk, speaker deck, PPT | `slides` |
 | Clickable concept, interaction demo, state switching | `prototype` |
 | Research, comparison, diligence, white paper | `dossier` |
 | Responsibility, process, governance, training, internal alignment | `briefing` |
@@ -42,7 +43,9 @@ Ask at most one blocking question and only for missing information that changes 
 
 Ask for the primary audience or delivery form only when multiple rows or none match.
 
-Choose `prototype-lite` for one page with at most three core interaction states. Choose `prototype-full` for multiple views or sustained iteration. Default to `prototype-lite`. Do not ask for a skin for `briefing` or `archive`.
+An explicit request for slides, PPT, Reveal.js, speaker notes, or stage delivery selects `slides` even when the subject could also fit `pitch` or `briefing`. Choose `prototype-lite` for one page with at most three core interaction states. Choose `prototype-full` for multiple views or sustained iteration. Default to `prototype-lite`. Use the `dify-x` theme for `slides`; do not ask for a skin while it is the only supported slides theme. Do not ask for a skin for `briefing` or `archive`.
+
+For `slides`, inspect the supplied material for real organization, product, partner, event, and language requirements before writing. Configure optional brand chrome only from verified local assets. Configure multiple locales only when requested or supported by source material, keep their slide topology aligned, and write each language for its audience instead of translating line by line. Never invent logos, partners, presenters, translations, citations, or image credits.
 
 For an existing managed project, preserve its preset, project ID, and deployment metadata. For a new project, stop before writing when the output directory is non-empty.
 
@@ -63,6 +66,7 @@ When rebuilding a legacy page or time-sensitive product story:
 |---|---|
 | `pitch` | [design system](references/design-system.md), [pitch contract](references/preset-pitch.md) |
 | `briefing` | [design system](references/design-system.md), [briefing theme](references/theme-briefing.md), [briefing contract](references/preset-briefing.md) |
+| `slides` | [design system](references/design-system.md), [Dify-X theme](references/theme-dify-x.md), [slides contract](references/preset-slides.md) |
 | `archive` | [win98-web theme](references/theme-win98-web.md), [archive contract](references/preset-archive.md) |
 | `prototype-lite`, `prototype-full` | [design system](references/design-system.md), [prototype contract](references/preset-prototype.md) |
 | `dossier` | [design system](references/design-system.md), [dossier contract](references/preset-dossier.md) |
@@ -71,7 +75,7 @@ When rebuilding a legacy page or time-sensitive product story:
 
 1. Run `blueprint --version`. Stop and request installation when unavailable; do not copy an old template as fallback.
 2. Write content according to the selected references.
-3. For `pitch`, `briefing`, or `archive`, write only semantic sources under `src/`, then run:
+3. For `pitch`, `briefing`, `slides`, or `archive`, write only semantic sources under `src/`, then run:
 
    ```bash
    blueprint create <preset> <output>
@@ -114,6 +118,6 @@ Omit `--account` by default. Let the CLI resolve the recorded account, `CLOUDFLA
 - Do not run `git init`, install dependencies, or start a server unless required by the requested operation.
 - Do not add unrequested documentation, linters, formatters, hooks, state libraries, or UI frameworks.
 - Do not write narration comments.
-- Preview only the compiled root `index.html` for `pitch`, `briefing`, and `archive`.
-- Do not recreate compiler-owned navigation, progress, responsive behavior, CSS, or runtime in semantic sources.
+- Preview only the compiled root `index.html` for `pitch`, `briefing`, `slides`, and `archive`.
+- Do not recreate compiler-owned navigation, progress, responsive behavior, deck chrome, language controls, CSS, or runtime in semantic sources.
 - Do not add CTA, contact, or approval slides to `briefing` unless explicitly requested.
