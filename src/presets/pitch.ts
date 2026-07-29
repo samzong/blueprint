@@ -1,10 +1,12 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { escapeHtml as html, language, optionalFile, parseObject, requiredString, validateFragment } from "./shared.ts";
 
 type PitchConfig = {
   brand: string;
+  brandLogo?: string;
+  brandTagline?: string;
   brandUrl?: string;
   date: string;
   footer: string;
@@ -13,6 +15,15 @@ type PitchConfig = {
 };
 
 export const pitchRequiredSections = ["hero", "solution", "cta"] as const;
+
+function optionalString(config: Record<string, unknown>, field: string, filename: string): string | undefined {
+  const value = config[field];
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new Error(`${filename}: ${field} must be a non-empty string`);
+  }
+  return value.trim();
+}
 
 function optionalHttpUrl(config: Record<string, unknown>, field: string, filename: string): string | undefined {
   const value = config[field];
@@ -29,11 +40,35 @@ function optionalHttpUrl(config: Record<string, unknown>, field: string, filenam
   return value;
 }
 
+async function inlineBrandLogo(sourceDirectory: string, filename: string): Promise<string> {
+  const mime = new Map([
+    [".jpeg", "image/jpeg"],
+    [".jpg", "image/jpeg"],
+    [".png", "image/png"],
+    [".svg", "image/svg+xml"],
+    [".webp", "image/webp"],
+  ]).get(path.extname(filename).toLowerCase());
+  if (!mime) throw new Error(`${filename}: brandLogo must be a JPEG, PNG, SVG, or WebP image`);
+
+  const [sourceRoot, logoFile] = await Promise.all([
+    realpath(sourceDirectory),
+    realpath(path.resolve(sourceDirectory, filename)),
+  ]);
+  const relative = path.relative(sourceRoot, logoFile);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw new Error(`${filename}: brandLogo must stay inside the project src directory`);
+  }
+  const data = await readFile(logoFile);
+  return `<img class="brand-logo" src="data:${mime};base64,${data.toString("base64")}" alt="">`;
+}
+
 function parseConfig(raw: string, filename: string): PitchConfig {
   const config = parseObject(raw, filename);
   return {
     title: requiredString(config, "title", filename),
     brand: requiredString(config, "brand", filename),
+    brandLogo: optionalString(config, "brandLogo", filename),
+    brandTagline: optionalString(config, "brandTagline", filename),
     brandUrl: optionalHttpUrl(config, "brandUrl", filename),
     date: requiredString(config, "date", filename),
     footer: requiredString(config, "footer", filename),
@@ -79,9 +114,16 @@ export async function createPitch(project: string, output?: string): Promise<str
   const config = parseConfig(configRaw, configFile);
   validateContent(sections, sectionsFile);
   if (/<\/style/i.test(customCss)) throw new Error(`${customCssFile}: contains </style`);
+  const logo = config.brandLogo ? await inlineBrandLogo(sourceDirectory, config.brandLogo) : "";
+  const brandContent =
+    logo || config.brandTagline
+      ? `${logo}<span class="brand-name">${html(config.brand)}</span>${
+          config.brandTagline ? `<span class="brand-tagline">${html(config.brandTagline)}</span>` : ""
+        }`
+      : html(config.brand);
   const brand = config.brandUrl
-    ? `<a class="logo" href="${html(config.brandUrl)}">${html(config.brand)}</a>`
-    : `<div class="logo">${html(config.brand)}</div>`;
+    ? `<a class="logo" href="${html(config.brandUrl)}">${brandContent}</a>`
+    : `<div class="logo">${brandContent}</div>`;
 
   const document = `<!DOCTYPE html>
 <html lang="${html(config.lang)}" data-deck-selector="section" data-deck-offset="nav.top" data-deck-progress-host="nav.top" data-deck-next-label="下一节">

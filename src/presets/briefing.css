@@ -118,6 +118,18 @@ body {
   font-weight: 500;
 }
 
+.mt-16 {
+  margin-top: 16px;
+}
+
+.mt-24 {
+  margin-top: 24px;
+}
+
+.mt-32 {
+  margin-top: 32px;
+}
+
 .card-grid {
   display: grid;
   gap: 16px;
@@ -329,6 +341,14 @@ h3 {
   .card-grid.cols-3 {
     grid-template-columns: 1fr;
   }
+
+  .card {
+    min-width: 0;
+  }
+
+  .card .mono {
+    overflow-wrap: anywhere;
+  }
 }
 
 @media (max-width: 720px) {
@@ -353,6 +373,10 @@ h3 {
   .slide-num {
     top: 24px;
     right: 22px;
+  }
+
+  .stage {
+    min-width: 150px;
   }
 
   .matrix {

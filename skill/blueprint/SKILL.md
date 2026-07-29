@@ -46,6 +46,17 @@ Choose `prototype-lite` for one page with at most three core interaction states.
 
 For an existing managed project, preserve its preset, project ID, and deployment metadata. For a new project, stop before writing when the output directory is non-empty.
 
+### Rebuild dated material
+
+When rebuilding a legacy page or time-sensitive product story:
+
+1. Compare volatile claims with current code, runtime, accepted contracts, and authoritative sources before writing.
+2. Classify each claim as current fact, dated fact, target, or hypothesis.
+3. Keep only verified current facts in the main story. Label dated facts with their evidence date, and move unsupported numbers or superseded claims into an archive or `.local` claim ledger.
+4. Preserve the legacy artifact as historical evidence unless the user explicitly requests deletion.
+
+`blueprint check` proves structure, not factual freshness or visual equivalence.
+
 ### Load only the selected references
 
 | Preset | References |

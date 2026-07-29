@@ -1,6 +1,8 @@
 {
   "title": "blueprint — Build the brief, not the boilerplate",
   "brand": "blueprint",
+  "brandLogo": "brand.svg",
+  "brandTagline": "Agent-native websites",
   "brandUrl": "https://github.com/samzong/blueprint",
   "date": "2026-07-27",
   "footer": "blueprint · Deterministic web scaffolding",

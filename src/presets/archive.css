@@ -228,6 +228,12 @@ article {
     position: relative;
   }
 
+  .download-button,
+  .filter input,
+  .doc-button {
+    min-height: 44px;
+  }
+
   main {
     padding: 8px;
   }

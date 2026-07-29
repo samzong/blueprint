@@ -7,6 +7,12 @@ type ArchiveDocument = {
 type ArchivePayload = {
   documents: ArchiveDocument[];
   downloadName: string;
+  labels: {
+    count: string;
+    download: string;
+    empty: string;
+    search: string;
+  };
   lang: string;
   title: string;
 };

@@ -431,7 +431,7 @@ function renderNav() {
   if (visible.length === 0) {
     const empty = document.createElement("div");
     empty.className = "empty";
-    empty.textContent = "No matching documents";
+    empty.textContent = ARCHIVE.labels.empty;
     docsEl.append(empty);
     return;
   }
@@ -466,6 +466,6 @@ downloadEl.addEventListener("click", downloadAllDocs);
 filterEl.addEventListener("input", renderNav);
 window.addEventListener("hashchange", () => loadDoc(docPathFromLocation(), true));
 
-countEl.textContent = `${documents.length} documents`;
+countEl.textContent = ARCHIVE.labels.count;
 renderNav();
 loadDoc(activePath, true);
