@@ -1,0 +1,4 @@
+interface:
+  display_name: "Blueprint Release"
+  short_description: "Release Blueprint and verify the published artifact"
+  default_prompt: "Use $blueprint-release to publish the requested Blueprint version and verify the GitHub Release."
