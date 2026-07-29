@@ -463,7 +463,7 @@ test("scaffolds a working prototype-lite", async () => {
   assert.doesNotMatch(generated, /__[A-Z_]+__/);
 });
 
-test("scaffolds dossier and prototype-full from the shared template", async () => {
+test("scaffolds distinct dossier and prototype-full projects", async () => {
   const parent = await mkdtemp(path.join(os.tmpdir(), "blueprint-scaffold-"));
   const dossier = path.join(parent, "My Dossier");
   const prototype = path.join(parent, "My Prototype");
@@ -473,21 +473,29 @@ test("scaffolds dossier and prototype-full from the shared template", async () =
 
   const dossierPackage = JSON.parse(await readFile(path.join(dossier, "package.json"), "utf8"));
   const dossierApp = await readFile(path.join(dossier, "src", "App.tsx"), "utf8");
+  const dossierContent = await readFile(path.join(dossier, "src", "data", "content.ts"), "utf8");
   const dossierCss = await readFile(path.join(dossier, "src", "index.css"), "utf8");
   const prototypeApp = await readFile(path.join(prototype, "src", "App.tsx"), "utf8");
+  const prototypeContent = await readFile(path.join(prototype, "src", "data", "content.ts"), "utf8");
   const viteTypes = await readFile(path.join(dossier, "src", "vite-env.d.ts"), "utf8");
   const workspace = await readFile(path.join(dossier, "pnpm-workspace.yaml"), "utf8");
   assert.equal(dossierPackage.name, "my-dossier");
   assert.equal(workspace, "packages: []\n");
   assert.match(viteTypes, /vite\/client/);
-  assert.match(dossierApp, /My Dossier/);
-  assert.match(dossierApp, />Dossier</);
+  assert.match(dossierApp, /Open record/);
+  assert.match(dossierApp, /dialog/);
+  assert.match(dossierContent, /My Dossier/);
+  assert.match(dossierContent, /A decision-focused research dashboard/);
   assert.match(dossierCss, /@import "tailwindcss" source\(none\)/);
   assert.match(dossierCss, /@source "\.\/"/);
+  assert.match(dossierCss, /dialog::backdrop/);
   assert.match(dossierCss, /input:focus-visible/);
   assert.match(dossierCss, /min-height: 42px/);
+  assert.match(prototypeApp, /My Prototype/);
   assert.match(prototypeApp, />Prototype</);
+  assert.doesNotMatch(prototypeContent, /DossierContent/);
   assert.equal(await checkEntry(dossier), path.join(dossier, "index.html"));
+  assert.equal(await checkEntry(prototype), path.join(prototype, "index.html"));
 });
 
 test("refuses to scaffold into a non-empty directory", async () => {
@@ -599,4 +607,22 @@ test("managed dossier check does not require src/App.tsx", async () => {
 
   await rename(path.join(directory, "src", "App.tsx"), path.join(directory, "src", "Report.tsx"));
   assert.equal(await checkEntry(directory), entry);
+});
+
+test("managed Vite check requires a local source entry and build scripts", async () => {
+  const parent = await mkdtemp(path.join(os.tmpdir(), "blueprint-check-vite-entry-"));
+  const directory = path.join(parent, "report");
+  const entry = await createScaffold("dossier", directory);
+  await recordProject(directory, "dossier", entry, "0.1.0");
+
+  const html = await readFile(entry, "utf8");
+  await writeFile(entry, html.replace("/src/main.tsx", "/recovered/assets/app.js"));
+  await assert.rejects(checkEntry(directory), /missing module source entry \/recovered\/assets\/app\.js/);
+
+  await writeFile(entry, html);
+  const packageFile = path.join(directory, "package.json");
+  const packageValue = JSON.parse(await readFile(packageFile, "utf8"));
+  delete packageValue.scripts.build;
+  await writeFile(packageFile, `${JSON.stringify(packageValue, null, 2)}\n`);
+  await assert.rejects(checkEntry(directory), /requires non-empty dev and build scripts/);
 });

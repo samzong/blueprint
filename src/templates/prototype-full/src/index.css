@@ -23,14 +23,12 @@
 
 @layer base {
   html {
-    scroll-behavior: smooth;
     font-feature-settings: "ss01", "cv11";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   body {
-    min-width: 320px;
     overflow-x: hidden;
     background: var(--color-bg-subtle);
     color: var(--color-fg);
@@ -87,21 +85,6 @@
   p {
     overflow-wrap: anywhere;
   }
-
-  img {
-    display: block;
-    max-width: 100%;
-  }
-
-  dialog::backdrop {
-    background: rgb(10 10 10 / 70%);
-    backdrop-filter: blur(4px);
-  }
-
-  ::selection {
-    background: var(--color-highlight);
-    color: var(--color-fg);
-  }
 }
 
 @layer utilities {
@@ -115,11 +98,5 @@
       linear-gradient(rgba(10, 10, 10, 0.035) 1px, transparent 1px),
       linear-gradient(90deg, rgba(10, 10, 10, 0.035) 1px, transparent 1px);
     background-size: 28px 28px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
   }
 }
