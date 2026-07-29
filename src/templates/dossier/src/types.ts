@@ -1,4 +1,5 @@
 export type EvidenceLevel = "verified" | "reported" | "inferred" | "unknown";
+export type DossierLayout = "continuous" | "sectioned";
 
 export type ReportMeta = {
   eyebrow: string;
@@ -68,6 +69,7 @@ export type Source = {
 };
 
 export type DossierContent = {
+  layout: DossierLayout;
   meta: ReportMeta;
   metrics: Metric[];
   findings: Finding[];

@@ -1,15 +1,21 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { dossier } from "./data/content";
 import type { Evidence, EvidenceLevel } from "./types";
 
-const navigation = [
-  ["overview", "Overview"],
-  ["subjects", "Subjects"],
-  ["comparison", "Comparison"],
-  ["evidence", "Evidence"],
-  ["sources", "Sources"],
-] as const;
+type NavigationItem = {
+  id: string;
+  label: string;
+  children?: { id: string; label: string }[];
+};
+
+const navigation: NavigationItem[] = [
+  { id: "overview", label: "Overview" },
+  { id: "subjects", label: "Subjects" },
+  { id: "comparison", label: "Comparison" },
+  { id: "evidence", label: "Evidence" },
+  { id: "sources", label: "Sources" },
+];
 
 const levelLabels: Record<EvidenceLevel, string> = {
   verified: "Verified",
@@ -43,12 +49,39 @@ function SectionHeading({ eyebrow, title, summary }: { eyebrow: string; title: s
   );
 }
 
+function currentSection() {
+  const hash = window.location.hash.slice(1);
+  return navigation.find((item) => item.id === hash || item.children?.some((child) => child.id === hash))?.id ?? "overview";
+}
+
 export default function App() {
   const [query, setQuery] = useState("");
   const [level, setLevel] = useState<EvidenceLevel | "all">("all");
   const [selectedEvidence, setSelectedEvidence] = useState<Evidence | null>(null);
+  const [activeSection, setActiveSection] = useState(currentSection);
+  const [activeAnchor, setActiveAnchor] = useState(() => window.location.hash.slice(1) || "overview");
   const dialogRef = useRef<HTMLDialogElement>(null);
 
+  useEffect(() => {
+    const syncSection = () => {
+      const hash = window.location.hash.slice(1);
+      setActiveAnchor(hash || "overview");
+      setActiveSection(currentSection());
+      if (dossier.layout === "sectioned") {
+        requestAnimationFrame(() => {
+          const target = document.getElementById(hash);
+          if (target) target.scrollIntoView();
+          else window.scrollTo(0, 0);
+        });
+      }
+    };
+    syncSection();
+    window.addEventListener("hashchange", syncSection);
+    return () => window.removeEventListener("hashchange", syncSection);
+  }, []);
+
+  const activeNavigation = navigation.find((item) => item.id === activeSection) ?? navigation[0];
+  const sectionVisible = (id: string) => dossier.layout === "continuous" || activeSection === id;
   const normalizedQuery = query.trim().toLowerCase();
   const filteredSources = dossier.sources.filter(
     (source) =>
@@ -65,21 +98,58 @@ export default function App() {
             <div className="truncate text-sm font-black md:text-base">{dossier.meta.title}</div>
             <div className="hidden text-xs text-fg-subtle sm:block">Evidence before confidence</div>
           </a>
-          <nav className="ml-auto flex min-w-0 gap-1 overflow-x-auto" aria-label="Dossier sections">
-            {navigation.map(([id, label]) => (
-              <a
-                key={id}
-                href={`#${id}`}
-                className="min-h-11 shrink-0 rounded-md px-3 py-3 text-xs font-bold text-fg-muted transition-colors hover:bg-bg-muted hover:text-fg focus-visible:text-fg"
-              >
-                {label}
-              </a>
+          <nav className="ml-auto flex min-w-0 gap-1 overflow-x-auto lg:overflow-visible" aria-label="Dossier sections">
+            {navigation.map(({ id, label, children }) => (
+              <div key={id} className="group relative shrink-0">
+                <a
+                  href={`#${id}`}
+                  aria-current={dossier.layout === "sectioned" && activeSection === id ? "page" : undefined}
+                  className={`block min-h-11 rounded-md px-3 py-3 text-xs font-bold transition-colors hover:bg-bg-muted hover:text-fg focus-visible:text-fg ${
+                    dossier.layout === "sectioned" && activeSection === id ? "bg-fg text-bg" : "text-fg-muted"
+                  }`}
+                >
+                  {label}
+                </a>
+                {children && children.length > 0 && (
+                  <div className="invisible absolute right-0 top-full z-50 hidden w-64 pt-2 opacity-0 transition-all group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 lg:block">
+                    <div className="rounded-lg border border-line bg-card p-2 shadow-lift">
+                      {children.map((child) => (
+                        <a
+                          key={child.id}
+                          href={`#${child.id}`}
+                          aria-current={activeAnchor === child.id ? "location" : undefined}
+                          className="block rounded-md px-3 py-2 text-xs font-bold text-fg-muted hover:bg-bg-muted hover:text-fg"
+                        >
+                          {child.label}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             ))}
           </nav>
         </div>
+        {activeNavigation.children && activeNavigation.children.length > 0 && (
+          <nav className="border-t border-line px-4 py-2 lg:hidden" aria-label={`${activeNavigation.label} sections`}>
+            <div className="mx-auto flex max-w-[1480px] gap-1 overflow-x-auto">
+              {activeNavigation.children.map((child) => (
+                <a
+                  key={child.id}
+                  href={`#${child.id}`}
+                  aria-current={activeAnchor === child.id ? "location" : undefined}
+                  className="min-h-11 shrink-0 rounded-md px-3 py-3 text-xs font-bold text-fg-muted hover:bg-bg-muted hover:text-fg"
+                >
+                  {child.label}
+                </a>
+              ))}
+            </div>
+          </nav>
+        )}
       </header>
 
       <main>
+        {sectionVisible("overview") && (
         <section id="overview" className="canvas-bg scroll-mt-20 border-b border-line">
           <div className="mx-auto grid max-w-[1480px] gap-8 px-4 py-14 md:px-8 md:py-20 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
             <div>
@@ -107,7 +177,7 @@ export default function App() {
               </dl>
             </div>
 
-            <div className="grid gap-3 self-start">
+            <div id="overview-findings" className="scroll-mt-36 grid gap-3 self-start">
               {dossier.findings.map((finding) => (
                 <article key={finding.title} className="rounded-lg border border-line bg-card p-5 shadow-lift">
                   <div className="flex items-start justify-between gap-4">
@@ -120,7 +190,7 @@ export default function App() {
               ))}
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3 xl:col-span-2">
+            <div id="overview-metrics" className="scroll-mt-36 grid gap-3 sm:grid-cols-3 xl:col-span-2">
               {dossier.metrics.map((metric) => (
                 <article key={metric.label} className="rounded-lg border border-line bg-card p-5">
                   <div className="text-xs font-bold text-fg-subtle">{metric.label}</div>
@@ -131,7 +201,9 @@ export default function App() {
             </div>
           </div>
         </section>
+        )}
 
+        {sectionVisible("subjects") && (
         <section id="subjects" className="scroll-mt-20 border-b border-line bg-bg py-14 md:py-20">
           <div className="mx-auto max-w-[1480px] px-4 md:px-8">
             <SectionHeading
@@ -141,7 +213,7 @@ export default function App() {
             />
             <div className="mt-10 grid gap-4 lg:grid-cols-2">
               {dossier.subjects.map((subject) => (
-                <article key={subject.id} className="overflow-hidden rounded-lg border border-line bg-card">
+                <article id={subject.id} key={subject.id} className="scroll-mt-36 overflow-hidden rounded-lg border border-line bg-card">
                   <div className="h-1.5" style={{ backgroundColor: subject.color }} />
                   <div className="p-5 md:p-6">
                     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -179,7 +251,9 @@ export default function App() {
             </div>
           </div>
         </section>
+        )}
 
+        {sectionVisible("comparison") && (
         <section id="comparison" className="scroll-mt-20 border-b border-line bg-bg-subtle py-14 md:py-20">
           <div className="mx-auto max-w-[1480px] px-4 md:px-8">
             <SectionHeading eyebrow="02 / Comparison" title={dossier.comparison.title} summary={dossier.comparison.summary} />
@@ -211,7 +285,9 @@ export default function App() {
             </div>
           </div>
         </section>
+        )}
 
+        {sectionVisible("evidence") && (
         <section id="evidence" className="scroll-mt-20 border-b border-line bg-bg py-14 md:py-20">
           <div className="mx-auto max-w-[1480px] px-4 md:px-8">
             <SectionHeading
@@ -252,7 +328,9 @@ export default function App() {
             </div>
           </div>
         </section>
+        )}
 
+        {sectionVisible("sources") && (
         <section id="sources" className="scroll-mt-20 bg-bg-subtle py-14 md:py-20">
           <div className="mx-auto max-w-[1480px] px-4 md:px-8">
             <SectionHeading
@@ -260,7 +338,7 @@ export default function App() {
               title="Keep the research corpus usable"
               summary="Search and filter canonical records without mixing metadata-only sources with stronger evidence."
             />
-            <div className="mt-8 grid gap-3 md:grid-cols-[minmax(0,1fr)_240px]">
+            <div id="source-controls" className="scroll-mt-36 mt-8 grid gap-3 md:grid-cols-[minmax(0,1fr)_240px]">
               <label>
                 <span className="mb-2 block text-xs font-black text-fg-subtle">Search sources</span>
                 <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Title, publisher, or source type" />
@@ -273,7 +351,7 @@ export default function App() {
                 </select>
               </label>
             </div>
-            <div className="mt-6 overflow-hidden rounded-lg border border-line bg-card">
+            <div id="source-records" className="scroll-mt-36 mt-6 overflow-hidden rounded-lg border border-line bg-card">
               {filteredSources.length > 0 ? filteredSources.map((source) => (
                 <article key={source.id} className="grid gap-3 border-b border-line p-4 last:border-b-0 md:grid-cols-[1fr_160px_120px_auto] md:items-center">
                   <div>
@@ -294,6 +372,7 @@ export default function App() {
             </div>
           </div>
         </section>
+        )}
       </main>
 
       <footer className="border-t border-line bg-fg px-4 py-8 text-bg md:px-8">

@@ -484,6 +484,11 @@ test("scaffolds distinct dossier and prototype-full projects", async () => {
   assert.match(viteTypes, /vite\/client/);
   assert.match(dossierApp, /Open record/);
   assert.match(dossierApp, /dialog/);
+  assert.match(dossierApp, /dossier\.layout === "sectioned"/);
+  assert.match(dossierApp, /group-focus-within:visible/);
+  assert.match(dossierApp, /activeNavigation\.children/);
+  assert.doesNotMatch(dossierApp, /children:\s*\[/);
+  assert.match(dossierContent, /layout: "continuous"/);
   assert.match(dossierContent, /My Dossier/);
   assert.match(dossierContent, /A decision-focused research dashboard/);
   assert.match(dossierCss, /@import "tailwindcss" source\(none\)/);

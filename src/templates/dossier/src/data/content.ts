@@ -1,6 +1,7 @@
 import type { DossierContent } from "../types";
 
 export const dossier: DossierContent = {
+  layout: "continuous",
   meta: {
     eyebrow: "Evidence dossier",
     title: "__PROJECT_TITLE__",
