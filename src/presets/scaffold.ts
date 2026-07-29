@@ -34,9 +34,12 @@ export async function createScaffold(preset: ScaffoldPreset, project: string): P
   const existing = await readdir(projectDirectory);
   if (existing.length > 0) throw new Error(`output directory must be empty: ${projectDirectory}`);
 
-  const template = preset === "prototype-lite" ? "prototype-lite" : "dossier";
+  const template = preset === "prototype-full" ? "dossier" : preset;
   const templateDirectory = new URL(`../templates/${template}/`, import.meta.url);
   await cp(templateDirectory, projectDirectory, { recursive: true });
+  if (preset === "prototype-full") {
+    await cp(new URL("../templates/prototype-full/", import.meta.url), projectDirectory, { recursive: true });
+  }
 
   const tokens = {
     __PROJECT_NAME__: projectName(projectDirectory),
@@ -46,7 +49,12 @@ export async function createScaffold(preset: ScaffoldPreset, project: string): P
   const tokenFiles =
     template === "prototype-lite"
       ? ["index.html"]
-      : ["package.json", "index.html", path.join("src", "App.tsx")];
+      : [
+          "package.json",
+          "index.html",
+          path.join("src", "App.tsx"),
+          path.join("src", "data", "content.ts"),
+        ];
   await Promise.all(tokenFiles.map((filename) => replaceTokens(path.join(projectDirectory, filename), tokens)));
   return path.join(projectDirectory, "index.html");
 }
@@ -89,12 +97,45 @@ export async function checkScaffoldOutput(
   } catch {
     throw new Error(`${packageFile}: invalid JSON`);
   }
+  const manifest = packageValue as { name?: unknown; scripts?: Record<string, unknown> };
   if (
     typeof packageValue !== "object" ||
     packageValue === null ||
-    typeof (packageValue as { name?: unknown }).name !== "string" ||
-    (packageValue as { name: string }).name.trim() === ""
+    typeof manifest.name !== "string" ||
+    manifest.name.trim() === ""
   ) {
     throw new Error(`${packageFile}: name must be a non-empty string`);
+  }
+
+  const scripts = manifest.scripts;
+  if (
+    !scripts ||
+    typeof scripts.build !== "string" ||
+    scripts.build.trim() === "" ||
+    typeof scripts.dev !== "string" ||
+    scripts.dev.trim() === ""
+  ) {
+    throw new Error(`${packageFile}: ${preset} requires non-empty dev and build scripts`);
+  }
+
+  const moduleTag = html.match(/<script\b[^>]*\btype=["']module["'][^>]*>/i)?.[0];
+  const moduleSource = moduleTag?.match(/\bsrc=["']([^"']+)["']/i)?.[1];
+  if (!moduleSource || /^[a-z][a-z0-9+.-]*:/i.test(moduleSource) || moduleSource.startsWith("//")) {
+    throw new Error(`${filename}: ${preset} requires a local module source entry`);
+  }
+
+  const sourcePath = decodeURIComponent(moduleSource.split(/[?#]/, 1)[0]).replace(/^\/+/, "");
+  const sourceFile = path.resolve(projectRoot, sourcePath);
+  const relativeSource = path.relative(projectRoot, sourceFile);
+  if (relativeSource === ".." || relativeSource.startsWith(`..${path.sep}`) || path.isAbsolute(relativeSource)) {
+    throw new Error(`${filename}: module source entry must stay inside the project`);
+  }
+  try {
+    await readFile(sourceFile);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new Error(`${filename}: missing module source entry ${moduleSource}`);
+    }
+    throw error;
   }
 }

@@ -1,31 +1,180 @@
-import type { Section } from "../types";
+import type { DossierContent } from "../types";
 
-export const sections: Section[] = [
-  {
-    id: "overview",
-    title: "Overview",
-    summary: "Frame the subject, audience, and decision this project supports.",
-    body: [
-      "Replace this starter content with the strongest available evidence and a clear statement of scope.",
-      "Keep rendering components thin; put topic-specific structure and claims in this data module.",
+export const dossier: DossierContent = {
+  meta: {
+    eyebrow: "Evidence dossier",
+    title: "__PROJECT_TITLE__",
+    summary:
+      "A decision-focused research dashboard. Replace the starter subjects and claims with verified evidence, explicit limitations, and bounded implications.",
+    updatedAt: "Replace with evidence date",
+    audience: "Decision owners",
+    status: "Working assessment",
+  },
+  metrics: [
+    { label: "Subjects", value: "04", detail: "Comparable entities in the current scope" },
+    { label: "Evidence cards", value: "04", detail: "Claims with limitations and implications" },
+    { label: "Sources", value: "04", detail: "Canonical records awaiting final URLs" },
+  ],
+  findings: [
+    {
+      title: "Lead with the decision",
+      summary: "State the decision this dossier supports before presenting the research corpus.",
+      implication: "Readers can distinguish useful evidence from background material.",
+      level: "verified",
+    },
+    {
+      title: "Separate claim from confidence",
+      summary: "Every strong statement should expose its evidence level and known limitation.",
+      implication: "The report remains useful when the underlying evidence changes.",
+      level: "reported",
+    },
+    {
+      title: "Keep source records canonical",
+      summary: "Use one public landing page for each external source and local files for visual assets.",
+      implication: "The output stays portable without hiding where claims came from.",
+      level: "inferred",
+    },
+  ],
+  subjects: [
+    {
+      id: "subject-a",
+      name: "Subject A",
+      label: "Reference profile",
+      color: "#0f766e",
+      summary: "Replace with the subject's evidence-backed positioning and technical route.",
+      metrics: [
+        { label: "Evidence", value: "03", detail: "Linked starter records" },
+        { label: "Confidence", value: "High", detail: "Replace after source review" },
+      ],
+      strengths: ["Name the strongest demonstrated capability", "Keep claims specific and comparable"],
+      caveat: "Name the largest unproved assumption or missing source.",
+      sourceIds: ["source-a"],
+    },
+    {
+      id: "subject-b",
+      name: "Subject B",
+      label: "Alternative route",
+      color: "#c2410c",
+      summary: "Use the same structure for every subject so differences remain visible.",
+      metrics: [
+        { label: "Evidence", value: "02", detail: "Linked starter records" },
+        { label: "Confidence", value: "Medium", detail: "Replace after source review" },
+      ],
+      strengths: ["Describe a distinct mechanism", "Tie strengths to observed evidence"],
+      caveat: "Avoid converting self-reported capability into verified fact.",
+      sourceIds: ["source-b"],
+    },
+    {
+      id: "subject-c",
+      name: "Subject C",
+      label: "System route",
+      color: "#2563eb",
+      summary: "Explain where the subject sits in the wider system and operating loop.",
+      metrics: [
+        { label: "Evidence", value: "02", detail: "Linked starter records" },
+        { label: "Confidence", value: "Medium", detail: "Replace after source review" },
+      ],
+      strengths: ["Expose architecture boundaries", "Connect mechanism to operational impact"],
+      caveat: "Separate roadmap language from behavior available today.",
+      sourceIds: ["source-c"],
+    },
+    {
+      id: "subject-d",
+      name: "Subject D",
+      label: "Workflow route",
+      color: "#7c3aed",
+      summary: "Capture user-facing workflow evidence without losing technical depth.",
+      metrics: [
+        { label: "Evidence", value: "01", detail: "Linked starter records" },
+        { label: "Confidence", value: "Low", detail: "Replace after source review" },
+      ],
+      strengths: ["Show the end-to-end workflow", "Keep implementation density explicit"],
+      caveat: "Do not infer infrastructure depth from interface quality alone.",
+      sourceIds: ["source-d"],
+    },
+  ],
+  comparison: {
+    title: "Compare mechanisms, not feature lists",
+    summary: "Use stable criteria and explain what evidence supports each row.",
+    rows: [
+      {
+        criterion: "Primary route",
+        values: {
+          "subject-a": "Replace with the core technical route.",
+          "subject-b": "Replace with the alternative route.",
+          "subject-c": "Replace with the system route.",
+          "subject-d": "Replace with the workflow route.",
+        },
+        evidence: "Link the source records that justify this comparison.",
+      },
+      {
+        criterion: "Strongest proof",
+        values: {
+          "subject-a": "Name the strongest verified artifact.",
+          "subject-b": "Name the strongest verified artifact.",
+          "subject-c": "Name the strongest verified artifact.",
+          "subject-d": "Name the strongest verified artifact.",
+        },
+        evidence: "Prefer public technical material, observed behavior, or reproducible output.",
+      },
+      {
+        criterion: "Decision risk",
+        values: {
+          "subject-a": "State the largest decision risk.",
+          "subject-b": "State the largest decision risk.",
+          "subject-c": "State the largest decision risk.",
+          "subject-d": "State the largest decision risk.",
+        },
+        evidence: "Separate missing evidence from a demonstrated limitation.",
+      },
     ],
   },
-  {
-    id: "analysis",
-    title: "Analysis",
-    summary: "Compare the important options, mechanisms, or trade-offs.",
-    body: [
-      "Use explicit criteria instead of broad feature lists. Separate verified facts from interpretation.",
-      "Add new fields to the Section type only when the selected presentation genuinely requires them.",
-    ],
-  },
-  {
-    id: "conclusion",
-    title: "Conclusion",
-    summary: "State what the evidence supports and what remains unproved.",
-    body: [
-      "End with a bounded conclusion rather than a generic summary.",
-      "If more work is needed, name the smallest artifact or test that would resolve the uncertainty.",
-    ],
-  },
-];
+  evidence: [
+    {
+      id: "evidence-a",
+      subjectId: "subject-a",
+      title: "Verified mechanism",
+      finding: "Write one precise finding supported by the linked source.",
+      limitation: "State what the source does not prove.",
+      implication: "Explain how this changes the decision or next action.",
+      level: "verified",
+      sourceIds: ["source-a"],
+    },
+    {
+      id: "evidence-b",
+      subjectId: "subject-b",
+      title: "Reported capability",
+      finding: "Keep company-reported claims visibly distinct from independent verification.",
+      limitation: "No independent reproduction is attached to this starter record.",
+      implication: "Validate the capability before making it a selection criterion.",
+      level: "reported",
+      sourceIds: ["source-b"],
+    },
+    {
+      id: "evidence-c",
+      subjectId: "subject-c",
+      title: "Research inference",
+      finding: "Use inference only when the reasoning chain is explicit and inspectable.",
+      limitation: "The conclusion may change when implementation evidence becomes available.",
+      implication: "Track the missing evidence as a bounded follow-up.",
+      level: "inferred",
+      sourceIds: ["source-c"],
+    },
+    {
+      id: "evidence-d",
+      subjectId: "subject-d",
+      title: "Open question",
+      finding: "Unknown evidence should remain visible instead of being silently converted into confidence.",
+      limitation: "The source set is incomplete.",
+      implication: "Do not use this item as a deciding fact yet.",
+      level: "unknown",
+      sourceIds: ["source-d"],
+    },
+  ],
+  sources: [
+    { id: "source-a", title: "Replace with canonical source A", publisher: "Publisher", publishedAt: "Date", kind: "Primary" },
+    { id: "source-b", title: "Replace with canonical source B", publisher: "Publisher", publishedAt: "Date", kind: "Primary" },
+    { id: "source-c", title: "Replace with canonical source C", publisher: "Publisher", publishedAt: "Date", kind: "Analysis" },
+    { id: "source-d", title: "Replace with canonical source D", publisher: "Publisher", publishedAt: "Date", kind: "Open question" },
+  ],
+};
