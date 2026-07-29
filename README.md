@@ -5,6 +5,15 @@ blueprint turns a conversational web brief into deterministic, portable output.
 - The CLI owns presets, validation, preview, deployment, and project metadata.
 - The bundled Agent Skill owns preset selection, research, writing, and visual review.
 
+## Showcase
+
+Blueprint currently ships three visual theme families. Click a screenshot to open the live output.
+
+| Pitch | Briefing | Archive(Win 98) |
+|---|---|---|
+| [![Lathe pitch](docs/showcase/pitch.png)](https://lathe-ai-native-pitch.samzong.workers.dev/) | [![Blueprint briefing](docs/showcase/briefing.png)](https://blueprint-session-briefing.samzong.workers.dev/) | [![Mosoo archive](docs/showcase/archive.png)](https://mosoo-product-inquiry.samzong.workers.dev/) |
+| [Lathe](https://github.com/lathe-cli/lathe) · `pitch` | [Blueprint](https://github.com/samzong/blueprint) · `briefing` | Mosoo · `archive` |
+
 ## Install
 
 ```bash
@@ -14,6 +23,12 @@ brew install blueprint
 ```
 
 Homebrew installs Node.js, `gofs`, and Wrangler as dependencies.
+
+Copy this prompt to your agent:
+
+```text
+Install Blueprint and its bundled Agent Skill for your current agent: run brew tap samzong/tap, brew trust samzong/tap, brew install blueprint, and blueprint skill install, then verify the installation with blueprint --version.
+```
 
 ## Quick start
 
