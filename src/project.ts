@@ -24,6 +24,7 @@ export type ProjectManifest = {
 };
 
 export type ProjectSummary = {
+  createdWith?: string;
   deployed: boolean;
   entry?: string;
   error?: string;
@@ -233,6 +234,7 @@ export async function listProjects(root: string): Promise<ProjectSummary[]> {
           try {
             const manifest = await readProject(directory);
             projects.push({
+              createdWith: manifest.createdWith,
               deployed: manifest.deployment !== null,
               entry: manifest.entry,
               name: manifest.name,

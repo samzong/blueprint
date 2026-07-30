@@ -52,10 +52,16 @@ function sourceSlides(nodes: Node[], filename: string): Element[] {
   return slides;
 }
 
-function validateSlides(slides: Element[], filename: string, requireNumbers: boolean): void {
+function validateSlides(
+  slides: Element[],
+  filename: string,
+  requireNumbers: boolean,
+  requireIds = false,
+): void {
   if (slides.length < 4) throw new Error(`${filename}: expected a cover and at least three content slides`);
   const covers = slides.filter((slide) => hasClass(slide, "cover"));
   if (covers.length !== 1) throw new Error(`${filename}: expected exactly one cover slide`);
+  const ids = new Set<string>();
 
   for (const [index, slide] of slides.entries()) {
     if (childrenWithClass(slide, "slide-tag").length !== 1) {
@@ -67,13 +73,23 @@ function validateSlides(slides: Element[], filename: string, requireNumbers: boo
     if (requireNumbers && childrenWithClass(slide, "slide-num").length !== 1) {
       throw new Error(`${filename}: slide ${index + 1} is missing .slide-num`);
     }
+    if (requireIds) {
+      const id = slide.attrs.find((attribute) => attribute.name === "id")?.value.trim();
+      if (!id) throw new Error(`${filename}: slide ${index + 1} is missing an id`);
+      if (ids.has(id)) throw new Error(`${filename}: duplicate slide id ${JSON.stringify(id)}`);
+      ids.add(id);
+    }
   }
 }
 
-function addPageNumbers(slides: Element[]): void {
+function addSlideChrome(slides: Element[]): void {
   const total = String(slides.length).padStart(2, "0");
   for (const [index, slide] of slides.entries()) {
     const current = String(index + 1).padStart(2, "0");
+    const id = slide.attrs.find((attribute) => attribute.name === "id");
+    if (id) id.value ||= `slide-${current}`;
+    else slide.attrs.push({ name: "id", value: `slide-${current}` });
+
     const number = parseFragment(`<div class="slide-num mono">${current} / ${total}</div>`).childNodes[0];
     if (!number || !isElement(number)) throw new Error("briefing: failed to render page number");
     number.parentNode = slide;
@@ -123,7 +139,7 @@ async function compileSlides(content: string, sourceDirectory: string, filename:
   }
 
   await Promise.all(replacements);
-  addPageNumbers(slides);
+  addSlideChrome(slides);
   return serialize(fragment);
 }
 
@@ -153,12 +169,15 @@ export function checkBriefingOutput(html: string, filename: string): void {
     throw new Error(`${filename}: missing data-deck-selector=".slide"`);
   }
 
+  const hashEnabled = root?.attrs.some(
+    (attribute) => attribute.name === "data-deck-hash" && attribute.value === "true",
+  ) ?? false;
   const body = elements.find((element) => element.tagName === "body");
   const slides =
     body?.childNodes.filter(
       (node): node is Element => isElement(node) && node.tagName === "section" && hasClass(node, "slide"),
     ) ?? [];
-  validateSlides(slides, filename, true);
+  validateSlides(slides, filename, true, hashEnabled);
 
   for (const element of elements) {
     if (element.tagName === "iframe") {
@@ -207,7 +226,7 @@ export async function createBriefing(project: string, output?: string): Promise<
   const labels = deckLabels(config.lang, "page");
 
   const document = `<!DOCTYPE html>
-<html lang="${escapeHtml(config.lang)}" data-blueprint-preset="briefing" data-deck-selector=".slide" data-deck-progress-host="body" data-deck-labels="${escapeHtml(JSON.stringify(labels))}" data-deck-next-label="${escapeHtml(labels.next)}">
+<html lang="${escapeHtml(config.lang)}" data-blueprint-preset="briefing" data-deck-selector=".slide" data-deck-progress-host="body" data-deck-hash="true" data-deck-labels="${escapeHtml(JSON.stringify(labels))}" data-deck-next-label="${escapeHtml(labels.next)}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">

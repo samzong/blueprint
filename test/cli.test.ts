@@ -5,7 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { checkEntry, entryUrl, formatProjectList, main, parseArgs, preview } from "../src/cli.ts";
+import { availablePort, checkEntry, entryUrl, formatProjectList, main, parseArgs, preview } from "../src/cli.ts";
 import { archiveZhCNLabels } from "../src/presets/archive.zh-CN.ts";
 import { createArchive } from "../src/presets/archive.ts";
 import { createBriefing } from "../src/presets/briefing.ts";
@@ -16,6 +16,7 @@ import { language, validateFragment } from "../src/presets/shared.ts";
 import { recordProject } from "../src/project.ts";
 
 test("parses a safe local preview", () => {
+  assert.equal(parseArgs(["preview", "demo/index.html"]).port, 0);
   assert.deepEqual(
     parseArgs(["preview", "demo/index.html", "--root", "demo", "--port", "4175"]),
     {
@@ -27,6 +28,11 @@ test("parses a safe local preview", () => {
   );
 });
 
+test("chooses an available default preview port", async () => {
+  const port = await availablePort();
+  assert.ok(port > 0 && port <= 65535);
+});
+
 test("parses an explicit Worker deployment", () => {
   assert.deepEqual(
     parseArgs(["deploy", "dist", "--name", "blueprint-demo", "--account", "personal"]),
@@ -34,7 +40,7 @@ test("parses an explicit Worker deployment", () => {
       account: "personal",
       command: "deploy",
       name: "blueprint-demo",
-      port: 4175,
+      port: 0,
       target: "dist",
     },
   );
@@ -45,14 +51,14 @@ test("parses project listing", () => {
   assert.deepEqual(parseArgs(["list"]), {
     command: "list",
     json: false,
-    port: 4175,
+    port: 0,
     root: undefined,
     target: ".",
   });
   assert.deepEqual(parseArgs(["list", "--root", "projects", "--json"]), {
     command: "list",
     json: true,
-    port: 4175,
+    port: 0,
     root: "projects",
     target: ".",
   });
@@ -63,6 +69,7 @@ test("formats project lists without forcing long fields onto one line", () => {
   assert.equal(
     formatProjectList([
       {
+        createdWith: "0.1.3",
         deployed: true,
         entry: "index.html",
         name: "tokener-demo-day",
@@ -74,6 +81,7 @@ test("formats project lists without forcing long fields onto one line", () => {
     ]),
     "● tokener-demo-day  deployed\n" +
       "  ├─ preset   briefing\n" +
+      "  ├─ version  0.1.3\n" +
       "  ├─ local    /Users/x/git/lg/ai-gateway/.local/tokener-demo-day-blueprint\n" +
       "  └─ remote   https://ai-gateway-tokener-demo-day.samzong.workers.dev\n",
   );
@@ -381,9 +389,12 @@ test("creates a portable briefing with the shared deck runtime", async () => {
   assert.equal(await checkEntry(entry), entry);
   assert.match(generated, /data-blueprint-preset="briefing"/);
   assert.match(generated, /data-deck-selector="\.slide"/);
+  assert.match(generated, /data-deck-hash="true"/);
   assert.match(generated, /data-deck-next-label="Next page"/);
+  assert.match(generated, /<section(?=[^>]*class="slide cover")(?=[^>]*id="slide-01")[^>]*>/);
+  assert.match(generated, /<section(?=[^>]*class="slide")(?=[^>]*id="portable-output")[^>]*>/);
+  assert.match(generated, /<section(?=[^>]*class="slide section-divider")(?=[^>]*id="slide-06")[^>]*>/);
   assert.match(generated, /--accent: #0033ff/);
-  assert.match(generated, /class="slide cover"/);
   assert.match(generated, /class="slide-num mono">01 \/ 06/);
   assert.match(generated, /class="slide-num mono">06 \/ 06/);
   assert.match(generated, /\.metric \{/);
@@ -554,7 +565,7 @@ test("parses pitch creation without widening other commands", () => {
   assert.deepEqual(parseArgs(["create", "pitch", "demo", "--output", "dist/index.html"]), {
     command: "create",
     output: "dist/index.html",
-    port: 4175,
+    port: 0,
     preset: "pitch",
     target: "demo",
   });
@@ -631,6 +642,12 @@ test("rejects invalid briefing structure and local CSS assets", async () => {
     validSlides.replace('<div class="slide-inner"></div>', '<div class="slide-inner"><iframe src="https://example.com"></iframe></div>'),
   );
   await assert.rejects(createBriefing(directory), /iframes are not supported/);
+
+  const duplicateIds = validSlides
+    .replace('<section class="slide cover"', '<section id="duplicate" class="slide cover"')
+    .replace('<section class="slide"', '<section id="duplicate" class="slide"');
+  await writeFile(path.join(source, "slides.html"), duplicateIds);
+  await assert.rejects(createBriefing(directory), /duplicate slide id "duplicate"/);
 
   await writeFile(path.join(source, "slides.html"), validSlides);
   await writeFile(path.join(source, "style.css"), '@import "assets/theme.css";\n');

@@ -1,12 +1,12 @@
 ---
 name: blueprint
 description: >
-  Create, rebuild, validate, preview, discover, and deploy blueprint-managed
+  Create, upgrade, rebuild, validate, preview, discover, and deploy blueprint-managed
   web projects using pitch, briefing, slides, archive, prototype, or dossier presets.
   Use when the user mentions blueprint, asks to create a page, demo, deck,
-  report, or Markdown archive, or wants to check, preview, list, or publish an
-  existing blueprint project. Do not use for unrelated web projects or
-  non-web outputs.
+  report, or Markdown archive, or wants to upgrade, check, preview, list, or
+  publish an existing blueprint project. Do not use for unrelated web projects
+  or non-web outputs.
 ---
 
 **Reply language**: use Chinese with the user. Use English for code, comments, filenames, and Git text.
@@ -18,6 +18,7 @@ Use the `blueprint` CLI for deterministic scaffolding, compilation, validation, 
 ## Route the request
 
 - For a new project or content rebuild, follow **Create or rebuild**.
+- For an existing project that should adopt current preset capabilities, follow **Upgrade an Artifact**.
 - For validation, preview, or discovery, follow **Operate a project**.
 - For publication, follow **Deploy**.
 - Do not collect topic or preset inputs for an existing-project operation.
@@ -85,7 +86,19 @@ When rebuilding a legacy page or time-sensitive product story:
 4. For `prototype-lite`, `prototype-full`, or `dossier`, run `blueprint create <preset> <output>` before filling topic-specific content.
 5. Return the output path and the appropriate preview command. Do not install dependencies or start a server unless the user requested preview or deployment.
 
-Let `blueprint create` manage `.blueprint.json`. Never hand-write, delete, or copy it to create another project.
+Let `blueprint create` own the `.blueprint.json` schema and initial manifest. Never create, copy, delete, add, remove, or rename manifest fields. During a verified upgrade, the Agent may update only the existing `createdWith` value.
+
+## Upgrade an Artifact
+
+Treat an upgrade as a preservation-first semantic merge, not regeneration.
+
+1. Run `blueprint list --json` and `blueprint --version`. Use the discovered `preset` to select the current references. Treat the discovered `createdWith` as the single version marker for the latest Blueprint preset contract successfully applied to the Artifact.
+2. Inspect the current sources, output, and Git diff or history when available before writing. Treat content, branding, customized themes, custom CSS, and layout as user-owned even when they began as preset defaults.
+3. Compare the Artifact with the current preset references. Apply missing Blueprint-owned runtime, compiler chrome, validation, accessibility, and required structural improvements with the smallest patch. Do not retrofit new default styling unless the user asks for it.
+4. Preserve user-owned changes. When a required Blueprint change overlaps them, merge around the customization when safe; otherwise stop and report the conflict instead of overwriting it.
+5. Do not copy a fresh preset over the project or begin by rerunning `blueprint create`. For compiled presets, regenerate compiler-owned output only after preserving any output-only customization in semantic sources. For scaffold presets, patch the existing source in place.
+6. Run `blueprint check <target>`, visually verify the exact upgraded behavior, and inspect the final diff for lost content, branding, styles, or layout.
+7. Only after the upgrade and verification succeed, update the existing `.blueprint.json.createdWith` value to the exact current Blueprint version while preserving every other manifest field. If no preset change was applied or verification fails, leave it unchanged.
 
 ## Operate a project
 
