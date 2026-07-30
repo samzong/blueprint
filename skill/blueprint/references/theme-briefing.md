@@ -21,16 +21,17 @@ Use the only supported briefing skin: neutral full-screen slides, subtle grid, e
 
 ## Slide contract
 
-Every slide contains `.slide-tag`, `.slide-num`, and `.slide-inner`; `data-rail-title` supplies its navigation label. Use `.cover`, `.section-divider`, and `.alt` only for their semantic roles.
+Every source slide contains `.slide-tag` and `.slide-inner`; the compiler inserts `.slide-num`. The deck rail derives its label from `.slide-tag` or the heading, while `data-rail-title` is an optional override. Use `.cover`, `.section-divider`, and `.alt` only for their semantic roles.
 
 Reuse these components before inventing new ones:
 
 - `.meta-row` with `.k` and `.v`
 - `.card-grid`, `.cols-2`, `.cols-3`, and `.card`
+- `.card-grid` with `.metric`, `.metric-value`, `.metric-label`, and `.metric-detail`
 - `.soft-accent`, `.soft-amber`, `.soft-teal`, and `.soft-coral`
 - `.matrix` with `.own`, `.part`, and `.none`
 - `.stage-row` with `.stage`, `.active`, `.gap`, and `.ok`
 - `.checklist`, `.callout`, `.warn`, and `.risk`
-- `.mono`, `.serif`, `.lead`, and `.highlight`
+- `.mono`, `.serif`, `.lead`, `.highlight`, and `.source-note`
 
 `src/style.css` is only for topic-specific layout. Do not recreate desktop snapping, mobile flow, table overflow, keyboard navigation, fullscreen, autoplay, progress, reduced-motion handling, or the deck rail.

@@ -268,3 +268,11 @@ html:lang(zh-CN) .mono {
     transition: none !important;
   }
 }
+
+@media print {
+  .autoplay-progress,
+  .deck-rail,
+  .mobile-deck-nav {
+    display: none !important;
+  }
+}

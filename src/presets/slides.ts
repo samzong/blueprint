@@ -2,23 +2,30 @@ import { createRequire } from "node:module";
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { parse, parseFragment, serialize, type DefaultTreeAdapterMap } from "parse5";
+import { parse, parseFragment, serialize } from "parse5";
 
-import { escapeHtml, language, optionalFile, parseObject, requiredString, urlAttributes, validateFragment } from "./shared.ts";
+import {
+  assertPortableCss,
+  escapeHtml,
+  hasClass,
+  type HtmlElement as Element,
+  type HtmlNode as Node,
+  inlineImage,
+  isElement,
+  isWhitespace,
+  language,
+  localReference,
+  optionalFile,
+  parseObject,
+  requiredString,
+  urlAttributes,
+  validateFragment,
+} from "./shared.ts";
 
 const nodeRequire = createRequire(import.meta.url);
 const externalBase = "https://blueprint.invalid/";
 const revealUrlAttributes = new Set(["data-background-image", "data-background-video", "data-background-iframe"]);
 const unsupportedRevealAttributes = new Set(["data-src", "data-preview-image", "data-preview-video", "data-preview-link", "data-notes"]);
-const imageMimeTypes = new Map([
-  [".avif", "image/avif"],
-  [".gif", "image/gif"],
-  [".jpeg", "image/jpeg"],
-  [".jpg", "image/jpeg"],
-  [".png", "image/png"],
-  [".svg", "image/svg+xml"],
-  [".webp", "image/webp"],
-]);
 const themes = {
   "dify-x": new URL("./slides-dify-x.css", import.meta.url),
 } as const;
@@ -41,22 +48,6 @@ type SlidesConfig = {
   theme: SlidesTheme;
   title: string;
 };
-type Node = DefaultTreeAdapterMap["node"];
-type Element = DefaultTreeAdapterMap["element"];
-
-function isElement(node: Node): node is Element {
-  return "tagName" in node;
-}
-
-function isWhitespace(node: Node): boolean {
-  return "value" in node && node.value.trim() === "";
-}
-
-function hasClass(element: Element, name: string): boolean {
-  return element.attrs.some(
-    (attribute) => attribute.name === "class" && attribute.value.split(/\s+/).includes(name),
-  );
-}
 
 function descendants(element: Element): Element[] {
   const result: Element[] = [];
@@ -186,15 +177,6 @@ function parseConfig(raw: string, filename: string): SlidesConfig {
   };
 }
 
-function localReference(value: string): boolean {
-  if (value.trim().startsWith("#")) return false;
-  try {
-    return new URL(value, externalBase).origin === new URL(externalBase).origin;
-  } catch {
-    return false;
-  }
-}
-
 function assertRevealUrl(value: string, attribute: string, filename: string): void {
   if (!URL.canParse(value, externalBase)) {
     throw new Error(`${filename}: unsafe URL in ${attribute}`);
@@ -213,39 +195,6 @@ function assertRevealUrl(value: string, attribute: string, filename: string): vo
   if (attribute === "data-background-image" && !dataImage) {
     try { decodeURI(value); } catch { throw new Error(`${filename}: unsafe URL in ${attribute}`); }
   }
-}
-
-function assertPortableCss(css: string, filename: string): void {
-  if (/<\/style/i.test(css)) throw new Error(`${filename}: contains </style`);
-  if (/\\/.test(css)) throw new Error(`${filename}: CSS escape sequences are not supported`);
-  if (/@import\b/i.test(css)) throw new Error(`${filename}: CSS imports are not supported`);
-  if (/(?:-webkit-)?image-set\s*\(/i.test(css)) throw new Error(`${filename}: CSS image sets are not supported`);
-  for (const match of css.matchAll(/url\(\s*(?:(["'])(.*?)\1|([^)"']+))\s*\)/gi)) {
-    const value = (match[2] ?? match[3] ?? "").trim();
-    if (
-      value &&
-      URL.canParse(value, externalBase) &&
-      ["javascript:", "vbscript:", "file:", "blob:"].includes(new URL(value, externalBase).protocol)
-    ) {
-      throw new Error(`${filename}: unsafe URL in CSS`);
-    }
-    if (value && localReference(value)) {
-      throw new Error(`${filename}: local CSS assets are not supported; use <img> or data-background-image`);
-    }
-  }
-}
-
-async function inlineImage(sourceRoot: string, value: string, filename: string): Promise<string> {
-  const url = new URL(value, externalBase);
-  const relativeName = decodeURIComponent(url.pathname).replace(/^\/+/, "");
-  const assetFile = await realpath(path.resolve(sourceRoot, relativeName));
-  const relative = path.relative(sourceRoot, assetFile);
-  if (relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
-    throw new Error(`${filename}: asset must stay inside the project src directory`);
-  }
-  const mime = imageMimeTypes.get(path.extname(assetFile).toLowerCase());
-  if (!mime) throw new Error(`${filename}: unsupported image type ${path.extname(assetFile) || "(none)"}`);
-  return `data:${mime};base64,${(await readFile(assetFile)).toString("base64")}`;
 }
 
 function imageAttribute(element: Element, name: string): boolean {
