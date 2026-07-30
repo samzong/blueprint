@@ -49,6 +49,8 @@
   const selector = root.dataset.deckSelector || "section";
   const offsetSelector = root.dataset.deckOffset;
   const progressHostSelector = root.dataset.deckProgressHost;
+  const hashEnabled = root.dataset.deckHash === "true";
+  const initialHash = hashEnabled ? window.location.hash : "";
   const nextLabel = root.dataset.deckNextLabel || label("next", "Next");
   const slides = () =>
     Array.from(document.querySelectorAll(selector)).filter((element) => element instanceof HTMLElement);
@@ -66,16 +68,28 @@
     }
     return index;
   };
-  /** @param {number} index */
-  const goTo = (index) => {
+  /**
+   * @param {HTMLElement} element
+   * @param {boolean} [recordHistory]
+   */
+  const syncHash = (element, recordHistory = false) => {
+    if (!hashEnabled || !element.id) return;
+    const hash = `#${encodeURIComponent(element.id)}`;
+    if (window.location.hash === hash) return;
+    window.history[recordHistory ? "pushState" : "replaceState"](null, "", hash);
+  };
+  /** @param {number} index @param {boolean} [recordHistory] */
+  const goTo = (index, recordHistory = false) => {
     const list = slides();
     if (!list.length) return;
     const next = Math.max(0, Math.min(list.length - 1, index));
+    const target = list[next];
+    syncHash(target, recordHistory);
     const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
-    list[next].scrollIntoView({ behavior, block: "start" });
+    target.scrollIntoView({ behavior, block: "start" });
   };
   /** @param {number} delta */
-  const go = (delta) => goTo(currentIndex() + delta);
+  const go = (delta) => goTo(currentIndex() + delta, true);
   /**
    * @param {HTMLElement} element
    * @param {number} index
@@ -99,6 +113,22 @@
     const heading = element.querySelector("h2, h1");
     if (heading) return collapsedText(heading);
     return element.id || `Section ${index + 1}`;
+  };
+
+  /** @param {string} [hash] */
+  const goToHash = (hash = window.location.hash) => {
+    if (!hashEnabled || hash.length < 2) return false;
+    let id;
+    try {
+      id = decodeURIComponent(hash.slice(1));
+    } catch {
+      return false;
+    }
+    const target = slides().find((slide) => slide.id === id);
+    if (!target) return false;
+    if (window.location.hash !== hash) window.history.replaceState(null, "", hash);
+    target.scrollIntoView({ behavior: "instant", block: "start" });
+    return true;
   };
 
   const rail = document.createElement("div");
@@ -237,6 +267,7 @@
     const index = currentIndex();
     topButton.disabled = index <= 0 && window.scrollY < 8;
     lastButton.disabled = index >= list.length - 1;
+    if (list[index]) syncHash(list[index]);
     syncMobileNav();
   };
 
@@ -252,7 +283,7 @@
       tip.className = "deck-rail-tip";
       tip.textContent = title;
       tick.appendChild(tip);
-      tick.addEventListener("click", () => goTo(index));
+      tick.addEventListener("click", () => goTo(index, true));
       track.appendChild(tick);
     });
     syncRail();
@@ -301,18 +332,27 @@
     paintRestTicks();
   });
 
-  topButton.addEventListener("click", () => goTo(0));
-  lastButton.addEventListener("click", () => goTo(slides().length - 1));
+  topButton.addEventListener("click", () => goTo(0, true));
+  lastButton.addEventListener("click", () => goTo(slides().length - 1, true));
   fullscreenButton.addEventListener("click", toggleFullscreen);
   mobileNextButton.addEventListener("click", () => {
     const index = currentIndex();
-    goTo(index >= slides().length - 1 ? 0 : index + 1);
+    goTo(index >= slides().length - 1 ? 0 : index + 1, true);
   });
   document.addEventListener("fullscreenchange", syncFullscreen);
+  window.addEventListener("hashchange", () => goToHash());
   window.addEventListener("scroll", syncRail, { passive: true });
   window.addEventListener("resize", rebuildTicks);
-  rebuildTicks();
-  syncFullscreen();
+  if (hashEnabled) {
+    window.requestAnimationFrame(() => {
+      rebuildTicks();
+      goToHash(initialHash);
+      syncFullscreen();
+    });
+  } else {
+    rebuildTicks();
+    syncFullscreen();
+  }
 
   const slideDuration = 7000;
   const lastSlideDuration = 12000;
@@ -364,10 +404,10 @@
       go(-1);
     } else if (event.key === "Home") {
       event.preventDefault();
-      goTo(0);
+      goTo(0, true);
     } else if (event.key === "End") {
       event.preventDefault();
-      goTo(slides().length - 1);
+      goTo(slides().length - 1, true);
     } else if (event.key === "f" || event.key === "F") {
       event.preventDefault();
       toggleFullscreen();

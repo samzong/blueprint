@@ -62,6 +62,7 @@ test("records project identity and its latest deployment", async () => {
 
     assert.deepEqual(await listProjects(directory), [
       {
+        createdWith: "0.1.0",
         deployed: true,
         entry: "index.html",
         name: "demo",

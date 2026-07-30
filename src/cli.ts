@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { readFile, stat } from "node:fs/promises";
+import { createServer } from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -98,7 +99,7 @@ Arguments:
 
 Options:
   --root <path>  Additional filesystem root
-  --port <port>  Local port (default: 4175)
+  --port <port>  Local port (default: auto-selected)
   -h, --help     Show this help`,
   deploy: `Usage:
   blueprint deploy [target] --name <name> [options]
@@ -143,7 +144,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
   let scope: string | undefined;
   let scopeSet = false;
   let yes = false;
-  let port = 4175;
+  let port = 0;
 
   for (let index = 0; index < rest.length; index += 1) {
     const value = rest[index];
@@ -382,6 +383,23 @@ export function entryUrl(entry: string, root: string, port: number): string {
   return `http://127.0.0.1:${port}/${pathname}`;
 }
 
+export async function availablePort(): Promise<number> {
+  const server = createServer();
+  server.unref();
+  return await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        server.close();
+        reject(new Error("failed to allocate a preview port"));
+        return;
+      }
+      server.close((error) => (error ? reject(error) : resolve(address.port)));
+    });
+  });
+}
+
 export async function preview(target: string, rootOption: string | undefined, port: number): Promise<number> {
   const entry = await checkEntry(target);
   const project = await findProjectOrNull(entry);
@@ -410,6 +428,7 @@ export async function preview(target: string, rootOption: string | undefined, po
     }
   }
 
+  port ||= await availablePort();
   const url = entryUrl(entry, root, port);
   const child = viteProject
     ? spawn("pnpm", ["--reporter=silent", "--ignore-workspace", "dev", "--port", String(port), "--strictPort"], {
@@ -486,7 +505,7 @@ export function formatProjectList(
       }
       const status = project.deployed ? "deployed" : "local";
       const statusColor = project.deployed ? 32 : 33;
-      return `${paint(statusColor, project.deployed ? "●" : "○")} ${paint(1, project.name ?? "unnamed")}  ${paint(statusColor, status)}\n  ├─ ${label("preset")} ${project.preset}\n  ├─ ${label("local")} ${project.path}\n  └─ ${label("remote")} ${project.url ?? "-"}`;
+      return `${paint(statusColor, project.deployed ? "●" : "○")} ${paint(1, project.name ?? "unnamed")}  ${paint(statusColor, status)}\n  ├─ ${label("preset")} ${project.preset}\n  ├─ ${label("version")} ${project.createdWith}\n  ├─ ${label("local")} ${project.path}\n  └─ ${label("remote")} ${project.url ?? "-"}`;
     })
     .join("\n\n")}\n`;
 }

@@ -25,13 +25,15 @@ Use this contract for internal explanations, alignment, responsibility boundarie
 `slides.html` contains only slide sections:
 
 ```html
-<section class="slide" data-rail-title="Short title">
+<section class="slide" id="stable-topic" data-rail-title="Short title">
   <div class="slide-tag">Section tag</div>
   <div class="slide-inner">...</div>
 </section>
 ```
 
 Include exactly one `.slide.cover`, at least three content slides, and `.slide-tag` plus `.slide-inner` on every slide. The compiler inserts page numbers. Omit `data-rail-title` unless the navigation label should differ from the slide tag or heading. Default to 6–12 useful pages.
+
+The compiler assigns positional IDs such as `slide-01` when a slide has no `id`. Add a concise explicit ID when its shared URL must remain stable as slides are reordered. Generated briefings keep the current slide in the URL hash and open directly to a valid slide hash.
 
 Use `src/style.css` only for topic-specific layout. Reuse the page types and component vocabulary in `theme-briefing.md`; do not copy theme CSS or runtime.
 
