@@ -1,6 +1,5 @@
-.metric {
-  color: var(--accent);
-  font-family: var(--font-mono);
-  font-size: clamp(36px, 6vw, 64px);
-  font-weight: 700;
+.compiler-mark {
+  width: 56px;
+  height: 56px;
+  margin-bottom: 24px;
 }

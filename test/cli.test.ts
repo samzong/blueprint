@@ -120,6 +120,10 @@ test("rejects executable fragment markup", () => {
     () => validateFragment('<a href="data:text/html,hello">data</a>', "fragment.html"),
     /fragment\.html: unsafe URL in href/,
   );
+  assert.throws(
+    () => validateFragment('<img src="blob:https://example.com/image">', "fragment.html"),
+    /fragment\.html: unsafe URL in src/,
+  );
   assert.doesNotThrow(() =>
     validateFragment('<img src="data:image/png;base64,iVBORw0KGgo=" alt="">', "fragment.html"),
   );
@@ -269,6 +273,7 @@ test("creates a portable pitch from semantic source files", async () => {
 
   assert.equal(await checkEntry(entry), entry);
   assert.match(generated, /data-deck-selector="section"/);
+  assert.match(generated, /data-deck-next-label="Next section"/);
   assert.match(generated, /--accent: #2563eb/);
   assert.match(generated, /Build the brief/);
   assert.match(generated, /grid-template-columns: repeat\(2/);
@@ -374,10 +379,19 @@ test("creates a portable briefing with the shared deck runtime", async () => {
   const generated = await readFile(entry, "utf8");
 
   assert.equal(await checkEntry(entry), entry);
+  assert.match(generated, /data-blueprint-preset="briefing"/);
   assert.match(generated, /data-deck-selector="\.slide"/);
+  assert.match(generated, /data-deck-next-label="Next page"/);
   assert.match(generated, /--accent: #0033ff/);
   assert.match(generated, /class="slide cover"/);
+  assert.match(generated, /class="slide-num mono">01 \/ 06/);
+  assert.match(generated, /class="slide-num mono">06 \/ 06/);
   assert.match(generated, /\.metric \{/);
+  assert.match(generated, /\.source-note \{/);
+  assert.match(generated, /@media print/);
+  assert.match(generated, /\.compiler-mark \{/);
+  assert.match(generated, /data:image\/svg\+xml;base64,/);
+  assert.doesNotMatch(generated, /assets\/compiler\.svg/);
 });
 
 
@@ -587,22 +601,40 @@ test("rejects a non-HTTP pitch brand URL", async () => {
 });
 
 
-test("rejects briefing slides without required chrome", async () => {
+test("rejects invalid briefing structure and local CSS assets", async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-briefing-invalid-"));
   const source = path.join(directory, "src");
   await mkdir(source);
   await writeFile(path.join(source, "briefing.json"), JSON.stringify({ title: "Invalid" }));
+  const validSlides = [
+    '<section class="slide cover"><div class="slide-tag">Cover</div><div class="slide-inner"></div></section>',
+    '<section class="slide"><div class="slide-tag">Two</div><div class="slide-inner"></div></section>',
+    '<section class="slide"><div class="slide-tag">Three</div><div class="slide-inner"></div></section>',
+    '<section class="slide"><div class="slide-tag">Four</div><div class="slide-inner"></div></section>',
+  ].join("");
   await writeFile(
     path.join(source, "slides.html"),
     [
-      '<section class="slide cover"><div class="slide-tag">Cover</div><div class="slide-num">01</div></section>',
+      '<section class="slide cover"><div class="slide-tag">Cover</div><div class="slide-inner"></div></section>',
       '<section class="slide"><div class="slide-tag">Two</div></section>',
-      '<section class="slide"><div class="slide-tag">Three</div><div class="slide-num">03</div></section>',
-      '<section class="slide"><div class="slide-tag">Four</div><div class="slide-num">04</div></section>',
+      '<section class="slide"><div class="slide-tag">Three</div><div class="slide-inner"></div></section>',
+      '<section class="slide"><div class="slide-tag">Four</div><div class="slide-inner"></div></section>',
     ].join(""),
   );
+  await assert.rejects(createBriefing(directory), /slide 2 is missing \.slide-inner/);
 
-  await assert.rejects(createBriefing(directory), /slide 2 is missing \.slide-num/);
+  await writeFile(path.join(source, "slides.html"), `<div>${validSlides}</div>`);
+  await assert.rejects(createBriefing(directory), /expected only top-level <section class="slide">/);
+
+  await writeFile(
+    path.join(source, "slides.html"),
+    validSlides.replace('<div class="slide-inner"></div>', '<div class="slide-inner"><iframe src="https://example.com"></iframe></div>'),
+  );
+  await assert.rejects(createBriefing(directory), /iframes are not supported/);
+
+  await writeFile(path.join(source, "slides.html"), validSlides);
+  await writeFile(path.join(source, "style.css"), '@import "assets/theme.css";\n');
+  await assert.rejects(createBriefing(directory), /CSS imports are not supported/);
 });
 
 
@@ -706,6 +738,13 @@ test("managed check enforces briefing slide chrome", async () => {
   await recordProject(directory, "briefing", entry, "0.1.0");
 
   let html = await readFile(entry, "utf8");
+  html = html.replace(' data-blueprint-preset="briefing"', "");
+  await writeFile(entry, html);
+  assert.equal(await checkEntry(entry), entry);
+
+  await writeFile(entry, html.replace(/data:image\/svg\+xml;base64,[^"]+/, "blob:https://example.com/image"));
+  await assert.rejects(checkEntry(entry), /unsafe URL in src/);
+
   html = html.replace(/\bslide-num\b/g, "slide-number");
   await writeFile(entry, html);
   await assert.rejects(checkEntry(entry), /missing \.slide-num/);

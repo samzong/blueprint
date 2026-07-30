@@ -1,6 +1,7 @@
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { deckLabels } from "../shared/i18n/deck.ts";
 import { escapeHtml as html, language, optionalFile, parseObject, requiredString, validateFragment } from "./shared.ts";
 
 type PitchConfig = {
@@ -124,9 +125,10 @@ export async function createPitch(project: string, output?: string): Promise<str
   const brand = config.brandUrl
     ? `<a class="logo" href="${html(config.brandUrl)}">${brandContent}</a>`
     : `<div class="logo">${brandContent}</div>`;
+  const labels = deckLabels(config.lang, "section");
 
   const document = `<!DOCTYPE html>
-<html lang="${html(config.lang)}" data-deck-selector="section" data-deck-offset="nav.top" data-deck-progress-host="nav.top" data-deck-next-label="下一节">
+<html lang="${html(config.lang)}" data-deck-selector="section" data-deck-offset="nav.top" data-deck-progress-host="nav.top" data-deck-labels="${html(JSON.stringify(labels))}" data-deck-next-label="${html(labels.next)}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">

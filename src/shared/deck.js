@@ -40,10 +40,16 @@
   const collapsedText = (element) => (element?.textContent ?? "").replace(/\s+/g, " ").trim();
 
   const root = document.documentElement;
+  /** @type {Record<string, string>} */
+  const labels = JSON.parse(root.dataset.deckLabels || "{}");
+  /** @param {string} key @param {string} fallback */
+  const label = (key, fallback) => labels[key] || fallback;
+  /** @param {string} value */
+  const escapeMarkup = (value) => value.replace(/[&<>"']/g, (character) => `&#${character.charCodeAt(0)};`);
   const selector = root.dataset.deckSelector || "section";
   const offsetSelector = root.dataset.deckOffset;
   const progressHostSelector = root.dataset.deckProgressHost;
-  const nextLabel = root.dataset.deckNextLabel || "Next";
+  const nextLabel = root.dataset.deckNextLabel || label("next", "Next");
   const slides = () =>
     Array.from(document.querySelectorAll(selector)).filter((element) => element instanceof HTMLElement);
   const currentIndex = () => {
@@ -97,27 +103,27 @@
 
   const rail = document.createElement("div");
   rail.className = "deck-rail";
-  rail.setAttribute("aria-label", "Section navigation");
+  rail.setAttribute("aria-label", label("sectionNavigation", "Section navigation"));
   const iconFullscreen = '<path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/>';
   const iconExitFullscreen = '<path d="M6 2v4H2M14 6V2h-4M10 14v-4h4M2 10h4v4"/>';
   const iconPlay = '<path d="M6 4l6 4-6 4z" fill="currentColor" stroke="none"/>';
   const iconPause = '<path d="M5 4v8M11 4v8"/>';
   rail.innerHTML = [
-    '<button type="button" data-rail="fs" aria-label="Fullscreen">',
-    '<span class="deck-rail-tip">Fullscreen</span>',
+    `<button type="button" data-rail="fs" aria-label="${escapeMarkup(label("fullscreen", "Fullscreen"))}">`,
+    `<span class="deck-rail-tip">${escapeMarkup(label("fullscreen", "Fullscreen"))}</span>`,
     `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${iconFullscreen}</svg>`,
     "</button>",
-    '<button type="button" data-rail="autoplay" aria-label="Autoplay">',
-    '<span class="deck-rail-tip">Autoplay</span>',
+    `<button type="button" data-rail="autoplay" aria-label="${escapeMarkup(label("autoplay", "Autoplay"))}">`,
+    `<span class="deck-rail-tip">${escapeMarkup(label("autoplay", "Autoplay"))}</span>`,
     `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">${iconPlay}</svg>`,
     "</button>",
-    '<button type="button" data-rail="top" aria-label="Top">',
-    '<span class="deck-rail-tip">Top</span>',
+    `<button type="button" data-rail="top" aria-label="${escapeMarkup(label("top", "Top"))}">`,
+    `<span class="deck-rail-tip">${escapeMarkup(label("top", "Top"))}</span>`,
     '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l5-5 5 5"/></svg>',
     "</button>",
     '<div class="deck-rail-track" data-rail-track></div>',
-    '<button type="button" data-rail="last" aria-label="Last section">',
-    '<span class="deck-rail-tip">Last</span>',
+    `<button type="button" data-rail="last" aria-label="${escapeMarkup(label("lastSection", "Last section"))}">`,
+    `<span class="deck-rail-tip">${escapeMarkup(label("last", "Last"))}</span>`,
     '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l5 5 5-5"/></svg>',
     "</button>",
   ].join("");
@@ -125,7 +131,7 @@
 
   const mobileNav = document.createElement("nav");
   mobileNav.className = "mobile-deck-nav";
-  mobileNav.setAttribute("aria-label", "移动端章节导航");
+  mobileNav.setAttribute("aria-label", label("mobileSectionNavigation", "Mobile section navigation"));
   mobileNav.innerHTML =
     '<span class="mobile-deck-count" aria-live="polite"></span><span class="mobile-deck-title"></span><button class="mobile-deck-next" type="button"></button>';
   document.body.appendChild(mobileNav);
@@ -135,7 +141,7 @@
   autoplayProgress.className = "autoplay-progress";
   autoplayProgress.max = 1;
   autoplayProgress.value = 0;
-  autoplayProgress.setAttribute("aria-label", "Current playback progress");
+  autoplayProgress.setAttribute("aria-label", label("currentPlaybackProgress", "Current playback progress"));
   const progressHost = progressHostSelector ? document.querySelector(progressHostSelector) : document.body;
   (progressHost || document.body).appendChild(autoplayProgress);
 
@@ -150,9 +156,14 @@
 
   const syncAutoplayButton = () => {
     root.classList.toggle("autoplay-enabled", autoplayRunning);
-    autoplayButton.setAttribute("aria-label", autoplayRunning ? "Pause autoplay" : "Autoplay");
+    autoplayButton.setAttribute(
+      "aria-label",
+      autoplayRunning ? label("pauseAutoplay", "Pause autoplay") : label("autoplay", "Autoplay"),
+    );
     autoplayButton.setAttribute("aria-pressed", String(autoplayRunning));
-    requireElement(autoplayButton, ".deck-rail-tip").textContent = autoplayRunning ? "Pause" : "Autoplay";
+    requireElement(autoplayButton, ".deck-rail-tip").textContent = autoplayRunning
+      ? label("pause", "Pause")
+      : label("autoplay", "Autoplay");
     requireNode(autoplayButton, "svg").innerHTML = autoplayRunning ? iconPause : iconPlay;
   };
   syncAutoplayButton();
@@ -210,11 +221,13 @@
     mobileCount.textContent = `${String(index + 1).padStart(2, "0")} / ${String(list.length).padStart(2, "0")}`;
     mobileTitle.textContent = slideTitle(list[index], index);
     mobileNextButton.innerHTML = last
-      ? '回到顶部 <span aria-hidden="true">↑</span>'
-      : `${nextLabel} <span aria-hidden="true">↓</span>`;
+      ? `${escapeMarkup(label("backToTop", "Back to top"))} <span aria-hidden="true">↑</span>`
+      : `${escapeMarkup(nextLabel)} <span aria-hidden="true">↓</span>`;
     mobileNextButton.setAttribute(
       "aria-label",
-      last ? "回到顶部" : `${nextLabel}：${slideTitle(list[index + 1], index + 1)}`,
+      last
+        ? label("backToTop", "Back to top")
+        : `${nextLabel}${label("separator", ": ")}${slideTitle(list[index + 1], index + 1)}`,
     );
   };
 
@@ -247,8 +260,13 @@
 
   const syncFullscreen = () => {
     const active = Boolean(document.fullscreenElement);
-    fullscreenButton.setAttribute("aria-label", active ? "Exit fullscreen" : "Fullscreen");
-    requireElement(fullscreenButton, ".deck-rail-tip").textContent = active ? "Exit" : "Fullscreen";
+    fullscreenButton.setAttribute(
+      "aria-label",
+      active ? label("exitFullscreen", "Exit fullscreen") : label("fullscreen", "Fullscreen"),
+    );
+    requireElement(fullscreenButton, ".deck-rail-tip").textContent = active
+      ? label("exitFullscreen", "Exit fullscreen")
+      : label("fullscreen", "Fullscreen");
     requireNode(fullscreenButton, "svg").innerHTML = active ? iconExitFullscreen : iconFullscreen;
   };
 
