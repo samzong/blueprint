@@ -15,7 +15,7 @@ Edit `<output>/index.html`. Keep local React state and the existing scaffold; do
 
 Content must provide:
 
-- 2–4 distinct interaction or result modes, not navigation tabs
+- 2–3 distinct interaction or result modes, not navigation tabs
 - a label, explanation, input, realistic examples, and distinct result for each mode
 - working prompt buttons and form submission
 - layouts suited to each result instead of one repeated card
