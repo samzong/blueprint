@@ -3,7 +3,7 @@
 blueprint turns a conversational web brief into deterministic, portable output.
 
 - The CLI owns presets, validation, preview, deployment, and project metadata.
-- The bundled Agent Skill owns preset selection, research, writing, and visual review.
+- The bundled Agent Skill owns preset selection, research, writing, upgrades, and visual review.
 
 ## Showcase
 
@@ -33,7 +33,7 @@ Install Blueprint and its bundled Agent Skill for your current agent: run brew t
 ## Quick start
 
 ```bash
-blueprint create pitch .local/demo
+blueprint create prototype-lite .local/demo
 blueprint check .local/demo
 blueprint preview .local/demo
 blueprint --help
@@ -51,7 +51,7 @@ Available presets:
 | `prototype-full` | Vite + React + TypeScript prototype |
 | `dossier` | Maintained Vite + React + TypeScript report |
 
-Every successful `create` writes `.blueprint.json` with the project identity, entry point, preset, blueprint version, and latest verified deployment. Rebuilding preserves the project ID and deployment record.
+Every successful `create` writes `.blueprint.json` with the project identity, entry point, preset, last verified preset version, and latest verified deployment. Rebuilding preserves the project ID, version marker, and deployment record; the bundled skill advances `createdWith` only after a verified upgrade.
 
 `blueprint list` discovers projects under the current directory. Use `--root <path>` to change the scan root and `--json` for machine-readable output.
 
@@ -76,7 +76,7 @@ Single-file presets, including `slides`, may be deployed from the project direct
 blueprint skill install
 ```
 
-The installer uses `@kitup/sdk` to detect supported agents, select user or project scope, and protect unmanaged targets from accidental overwrite. Run `blueprint skill install --help` for host, scope, dry-run, and overwrite options.
+The installer uses `@kitup/sdk` to detect supported agents, select user or project scope, and protect unmanaged targets from accidental overwrite. Run `blueprint skill install --help` for agent, scope, dry-run, and force options.
 
 ## Development
 
