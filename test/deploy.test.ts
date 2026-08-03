@@ -121,8 +121,16 @@ if (args[0] === "--version") {
     const projectPickerCwd = process.cwd();
     process.chdir(directory);
     try {
-      assert.equal(await main(["deploy", "--name", "slides"]), 0);
-      await assert.rejects(main(["deploy"]), /multiple managed projects available; pass a target path/);
+      assert.equal(await main(["deploy", "--project", "slides"]), 0);
+      const redeployed: { args: string[] } = JSON.parse(await readFile(log, "utf8"));
+      assert.equal(redeployed.args[redeployed.args.indexOf("--name") + 1], "blueprint-slides");
+      const slidesManifest: { deployment: { workerName: string } } = JSON.parse(
+        await readFile(path.join(slidesProject, ".blueprint.json"), "utf8"),
+      );
+      assert.equal(slidesManifest.deployment.workerName, "blueprint-slides");
+      await assert.rejects(main(["deploy", "--name", "slides"]), /multiple managed projects available; pass a target path or --project/);
+      await assert.rejects(main(["deploy"]), /multiple managed projects available; pass a target path or --project/);
+      await assert.rejects(main(["deploy", "--project", "missing"]), /no managed project named missing/);
     } finally {
       process.chdir(projectPickerCwd);
     }

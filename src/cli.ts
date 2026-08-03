@@ -41,6 +41,7 @@ export type ParsedArgs = {
   output?: string;
   port: number;
   preset?: string;
+  project?: string;
   root?: string;
   target?: string;
 };
@@ -91,7 +92,8 @@ Arguments:
   target  HTML file or project directory; omit to choose a managed project
 
 Options:
-  -h, --help  Show this help`,
+  --project <name>  Managed project name when target is omitted
+  -h, --help        Show this help`,
   preview: `Usage:
   blueprint preview [target] [options]
 
@@ -99,9 +101,10 @@ Arguments:
   target  HTML file or project directory; omit to choose a managed project
 
 Options:
-  --root <path>  Additional filesystem root
-  --port <port>  Local port (default: auto-selected)
-  -h, --help     Show this help`,
+  --project <name>  Managed project name when target is omitted
+  --root <path>     Additional filesystem root
+  --port <port>     Local port (default: auto-selected)
+  -h, --help        Show this help`,
   deploy: `Usage:
   blueprint deploy [target] [options]
 
@@ -109,6 +112,7 @@ Arguments:
   target  Project entry or project directory; omit to choose a managed project
 
 Options:
+  --project <name>          Managed project name when target is omitted
   --name <name>             Worker name (default: recorded or derived)
   --account <name-or-id>    Cloudflare account
   -h, --help                Show this help`,
@@ -141,6 +145,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
   let json = false;
   let name: string | undefined;
   let output: string | undefined;
+  let project: string | undefined;
   let root: string | undefined;
   let scope: string | undefined;
   let scopeSet = false;
@@ -173,6 +178,12 @@ export function parseArgs(argv: string[]): ParsedArgs {
       if (!Number.isInteger(port) || port < 1 || port > 65535) {
         throw new Error("--port must be an integer between 1 and 65535");
       }
+      continue;
+    }
+
+    if (value === "--project" && (command === "check" || command === "preview" || command === "deploy")) {
+      project = rest[++index];
+      if (!project || project.startsWith("-")) throw new Error("--project requires a managed project name");
       continue;
     }
 
@@ -251,19 +262,23 @@ export function parseArgs(argv: string[]): ParsedArgs {
 
   if (command === "deploy") {
     if (positionals.length > 1) throw new Error("expected at most one target path");
+    if (project && positionals[0]) throw new Error("--project cannot be combined with a target path");
     return {
       account,
       command,
       name,
       port,
+      project,
       target: positionals[0],
     };
   }
 
   if (positionals.length > 1) throw new Error("expected at most one target path");
+  if (project && positionals[0]) throw new Error("--project cannot be combined with a target path");
   return {
     command,
     port,
+    project,
     root,
     target: positionals[0],
   };
@@ -525,8 +540,10 @@ async function targetForProject(root: string, preset: ProjectPreset, command: Ma
 }
 
 async function selectManagedTarget(command: ManagedCommand, preferredName?: string): Promise<string> {
-  const current = await findProjectOrNull(".");
-  if (current) return await targetForProject(current.root, current.manifest.preset, command);
+  if (!preferredName) {
+    const current = await findProjectOrNull(".");
+    if (current) return await targetForProject(current.root, current.manifest.preset, command);
+  }
 
   const projects = (await listProjects(".")).sort(
     (left, right) => (left.name ?? left.path).localeCompare(right.name ?? right.path) || left.path.localeCompare(right.path),
@@ -559,8 +576,10 @@ async function selectManagedTarget(command: ManagedCommand, preferredName?: stri
       return { choice, project, target };
     }),
   );
-  const named = preferredName ? rows.filter((row) => row.project.name === preferredName) : [];
-  const candidates = named.length > 0 ? named : rows;
+  const candidates = preferredName ? rows.filter((row) => row.project.name === preferredName) : rows;
+  if (preferredName && candidates.length === 0) {
+    throw new Error(`no managed project named ${preferredName} under ${path.resolve(".")}`);
+  }
   const available = candidates.filter((row) => !row.choice.disabled);
   const unavailable = candidates.filter((row) => row.choice.disabled);
   if (available.length === 1) return available[0].target;
@@ -575,7 +594,7 @@ async function selectManagedTarget(command: ManagedCommand, preferredName?: stri
   return await chooseOne(
     `Select a project to ${command}`,
     [...available, ...unavailable].map((row) => row.choice),
-    `multiple managed projects available; pass a target path: ${available
+    `multiple managed projects available; pass a target path or --project <name>: ${available
       .map((row) => `${row.choice.name} (${row.project.path})`)
       .join(", ")}`,
   );
@@ -719,14 +738,14 @@ export async function main(argv: string[]): Promise<number> {
   }
 
   if (args.command === "check") {
-    const target = args.target ?? (await selectManagedTarget("check"));
+    const target = args.target ?? (await selectManagedTarget("check", args.project));
     const entry = await checkEntry(target);
     process.stdout.write(`OK ${entry}\n`);
     return 0;
   }
 
   if (args.command === "deploy") {
-    const target = args.target ?? (await selectManagedTarget("deploy", args.name));
+    const target = args.target ?? (await selectManagedTarget("deploy", args.project));
     const entry = await checkEntry(target);
     const project = await findProject(target);
     if (project.manifest.preset === "prototype-full" || project.manifest.preset === "dossier") {
@@ -758,7 +777,7 @@ export async function main(argv: string[]): Promise<number> {
   }
 
   if (args.command === "preview") {
-    const target = args.target ?? (await selectManagedTarget("preview"));
+    const target = args.target ?? (await selectManagedTarget("preview", args.project));
     return await preview(target, args.root, args.port);
   }
 

@@ -115,7 +115,10 @@ Use paths returned by discovery; do not store absolute paths in `.blueprint.json
 Deploy only after the user has reviewed the preview and explicitly requested publication:
 
 - Single-file output: `blueprint deploy <output>/index.html --name <worker-name>`
+- Select among managed projects without a path: `blueprint deploy --project <project-name>`
 - `prototype-full` or `dossier`: run `pnpm install && pnpm build`, then deploy `<output>/dist`
+
+`--name` is only the Worker name. Do not use it to pick a managed project.
 
 Derive `worker-name` without asking:
 

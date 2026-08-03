@@ -22,6 +22,7 @@ test("parses a safe local preview", () => {
     parseArgs(["preview", "demo/index.html", "--root", "demo", "--port", "4175"]),
     {
       command: "preview",
+      project: undefined,
       target: "demo/index.html",
       root: "demo",
       port: 4175,
@@ -42,16 +43,27 @@ test("parses an explicit Worker deployment", () => {
       command: "deploy",
       name: "blueprint-demo",
       port: 0,
+      project: undefined,
       target: "dist",
     },
   );
+  assert.deepEqual(parseArgs(["deploy", "--project", "slides"]), {
+    account: undefined,
+    command: "deploy",
+    name: undefined,
+    port: 0,
+    project: "slides",
+    target: undefined,
+  });
   assert.deepEqual(parseArgs(["deploy"]), {
     account: undefined,
     command: "deploy",
     name: undefined,
     port: 0,
+    project: undefined,
     target: undefined,
   });
+  assert.throws(() => parseArgs(["deploy", "dist", "--project", "slides"]), /cannot be combined with a target path/);
 });
 
 test("parses project listing", () => {
