@@ -5,6 +5,7 @@ import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
 
+import { chooseOne } from "./interactive.ts";
 import { projectFilename, readProject } from "./project.ts";
 
 const execFileAsync = promisify(execFile);
@@ -45,7 +46,7 @@ function parseAccounts(output: string): Account[] {
   return accounts;
 }
 
-function selectAccount(accounts: Account[], requested: string | undefined): Account {
+async function selectAccount(accounts: Account[], requested: string | undefined): Promise<Account> {
   if (requested) {
     const matches = accounts.filter((account) => account.id === requested || account.name === requested);
     if (matches.length === 1) return matches[0];
@@ -54,10 +55,11 @@ function selectAccount(accounts: Account[], requested: string | undefined): Acco
   }
 
   if (accounts.length === 1) return accounts[0];
-  throw new Error(
-    `multiple Cloudflare accounts available; pass --account <name-or-id>: ${accounts
-      .map((account) => account.name)
-      .join(", ")}`,
+  const names = accounts.map((account) => account.name).join(", ");
+  return await chooseOne(
+    "Select a Cloudflare account",
+    accounts.map((account) => ({ description: account.id, name: account.name, value: account })),
+    `multiple Cloudflare accounts available; pass --account <name-or-id>: ${names}`,
   );
 }
 
@@ -138,7 +140,7 @@ export async function deployWorker(
   } catch {
     throw new Error("Wrangler is not authenticated; run wrangler login");
   }
-  const account = selectAccount(parseAccounts(whoami), options.account ?? process.env.CLOUDFLARE_ACCOUNT_ID);
+  const account = await selectAccount(parseAccounts(whoami), options.account ?? process.env.CLOUDFLARE_ACCOUNT_ID);
   const temporary = await mkdtemp(path.join(os.tmpdir(), "blueprint-deploy-"));
 
   try {

@@ -15,6 +15,7 @@ import {
 import { parse, type DefaultTreeAdapterMap } from "parse5";
 
 import { deployWorker } from "./deploy.ts";
+import { chooseOne, type Choice } from "./interactive.ts";
 import { checkArchiveOutput, createArchive } from "./presets/archive.ts";
 import { checkBriefingOutput, createBriefing } from "./presets/briefing.ts";
 import { checkPitchOutput, createPitch } from "./presets/pitch.ts";
@@ -41,7 +42,7 @@ export type ParsedArgs = {
   port: number;
   preset?: string;
   root?: string;
-  target: string;
+  target?: string;
 };
 
 const usage = `blueprint — agent-native web scaffolding
@@ -87,7 +88,7 @@ Options:
   blueprint check [target]
 
 Arguments:
-  target  HTML file or project directory (default: .)
+  target  HTML file or project directory; omit to choose a managed project
 
 Options:
   -h, --help  Show this help`,
@@ -95,20 +96,20 @@ Options:
   blueprint preview [target] [options]
 
 Arguments:
-  target  HTML file or project directory (default: .)
+  target  HTML file or project directory; omit to choose a managed project
 
 Options:
   --root <path>  Additional filesystem root
   --port <port>  Local port (default: auto-selected)
   -h, --help     Show this help`,
   deploy: `Usage:
-  blueprint deploy [target] --name <name> [options]
+  blueprint deploy [target] [options]
 
 Arguments:
-  target  Project entry or project directory (default: .)
+  target  Project entry or project directory; omit to choose a managed project
 
 Options:
-  --name <name>             Worker name (required)
+  --name <name>             Worker name (default: recorded or derived)
   --account <name-or-id>    Cloudflare account
   -h, --help                Show this help`,
   list: `Usage:
@@ -250,13 +251,12 @@ export function parseArgs(argv: string[]): ParsedArgs {
 
   if (command === "deploy") {
     if (positionals.length > 1) throw new Error("expected at most one target path");
-    if (!name) throw new Error("--name is required");
     return {
       account,
       command,
       name,
       port,
-      target: positionals[0] ?? ".",
+      target: positionals[0],
     };
   }
 
@@ -265,7 +265,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
     command,
     port,
     root,
-    target: positionals[0] ?? ".",
+    target: positionals[0],
   };
 }
 
@@ -510,6 +510,104 @@ export function formatProjectList(
     .join("\n\n")}\n`;
 }
 
+type ManagedCommand = "check" | "deploy" | "preview";
+
+async function targetForProject(root: string, preset: ProjectPreset, command: ManagedCommand): Promise<string> {
+  if (command !== "deploy" || (preset !== "prototype-full" && preset !== "dossier")) return root;
+
+  const target = path.join(root, "dist");
+  try {
+    if (!(await stat(path.join(target, "index.html"))).isFile()) throw new Error("not a file");
+  } catch {
+    throw new Error(`${preset}: run pnpm build and deploy ${target}`);
+  }
+  return target;
+}
+
+async function selectManagedTarget(command: ManagedCommand, preferredName?: string): Promise<string> {
+  const current = await findProjectOrNull(".");
+  if (current) return await targetForProject(current.root, current.manifest.preset, command);
+
+  const projects = (await listProjects(".")).sort(
+    (left, right) => (left.name ?? left.path).localeCompare(right.name ?? right.path) || left.path.localeCompare(right.path),
+  );
+  if (projects.length === 0) {
+    throw new Error(`no managed projects found under ${path.resolve(".")}; pass a target path`);
+  }
+
+  const rows = await Promise.all(
+    projects.map(async (project) => {
+      let disabled = project.error;
+      let target = project.path;
+      if (!disabled && project.name && project.preset) {
+        try {
+          target = await targetForProject(project.path, project.preset, command);
+        } catch (error) {
+          disabled = error instanceof Error ? error.message : String(error);
+        }
+      } else if (!disabled) {
+        disabled = "invalid project manifest";
+      }
+
+      const relative = path.relative(process.cwd(), project.path) || ".";
+      const choice: Choice<string> = {
+        description: `${project.preset ?? "invalid"} | ${relative}`,
+        disabled,
+        name: project.name ?? path.basename(project.path),
+        value: target,
+      };
+      return { choice, project, target };
+    }),
+  );
+  const named = preferredName ? rows.filter((row) => row.project.name === preferredName) : [];
+  const candidates = named.length > 0 ? named : rows;
+  const available = candidates.filter((row) => !row.choice.disabled);
+  const unavailable = candidates.filter((row) => row.choice.disabled);
+  if (available.length === 1) return available[0].target;
+  if (available.length === 0) {
+    throw new Error(
+      `no usable managed projects found under ${path.resolve(".")}: ${candidates
+        .map((row) => `${row.choice.name}: ${row.choice.disabled}`)
+        .join("; ")}`,
+    );
+  }
+
+  return await chooseOne(
+    `Select a project to ${command}`,
+    [...available, ...unavailable].map((row) => row.choice),
+    `multiple managed projects available; pass a target path: ${available
+      .map((row) => `${row.choice.name} (${row.project.path})`)
+      .join(", ")}`,
+  );
+}
+
+async function deriveWorkerName(projectRoot: string, projectName: string): Promise<string> {
+  let directory = path.resolve(projectRoot);
+  let repository: string | undefined;
+  for (;;) {
+    try {
+      await stat(path.join(directory, ".git"));
+      repository = path.basename(directory);
+      break;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+
+    const parent = path.dirname(directory);
+    if (parent === directory) break;
+    directory = parent;
+  }
+
+  const value = (repository ? `${repository}-${projectName}` : projectName)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 63)
+    .replace(/-+$/g, "");
+  if (!value) throw new Error("cannot derive a Worker name; pass --name <name>");
+  return value;
+}
+
 export async function main(argv: string[]): Promise<number> {
   const helpRequested = argv.includes("-h") || argv.includes("--help");
   if (argv.length === 0 || (argv.length === 1 && helpRequested)) {
@@ -576,6 +674,7 @@ export async function main(argv: string[]): Promise<number> {
   }
 
   if (args.command === "create") {
+    const target = args.target ?? ".";
     let entry: string;
     let preset: ProjectPreset;
     if (
@@ -587,20 +686,20 @@ export async function main(argv: string[]): Promise<number> {
       args.preset === "prototype-full" ||
       args.preset === "dossier"
     ) {
-      await readCompatibleProject(args.target, args.preset);
+      await readCompatibleProject(target, args.preset);
     }
     if (args.preset === "pitch") {
       preset = args.preset;
-      entry = await createPitch(args.target, args.output);
+      entry = await createPitch(target, args.output);
     } else if (args.preset === "archive") {
       preset = args.preset;
-      entry = await createArchive(args.target, args.output);
+      entry = await createArchive(target, args.output);
     } else if (args.preset === "briefing") {
       preset = args.preset;
-      entry = await createBriefing(args.target, args.output);
+      entry = await createBriefing(target, args.output);
     } else if (args.preset === "slides") {
       preset = args.preset;
-      entry = await createSlides(args.target, args.output);
+      entry = await createSlides(target, args.output);
     } else if (
       args.preset === "prototype-lite" ||
       args.preset === "prototype-full" ||
@@ -608,33 +707,26 @@ export async function main(argv: string[]): Promise<number> {
     ) {
       if (args.output) throw new Error("--output is only available for compiled presets");
       preset = args.preset;
-      entry = await createScaffold(preset, args.target);
+      entry = await createScaffold(preset, target);
     } else {
       throw new Error("unknown preset");
     }
 
-    await checkCreatedEntry(entry, preset, path.resolve(args.target));
-    await recordProject(args.target, preset, entry, await packageVersion());
+    await checkCreatedEntry(entry, preset, path.resolve(target));
+    await recordProject(target, preset, entry, await packageVersion());
     process.stdout.write(`Created ${entry}\nPreview with: blueprint preview ${JSON.stringify(entry)}\n`);
     return 0;
   }
 
   if (args.command === "check") {
-    const entry = await checkEntry(args.target);
+    const target = args.target ?? (await selectManagedTarget("check"));
+    const entry = await checkEntry(target);
     process.stdout.write(`OK ${entry}\n`);
     return 0;
   }
 
-  if (args.command === "deploy" && args.name) {
-    let target = args.target;
-    if (target === ".") {
-      const matches = (await listProjects(target)).filter((project) => project.name === args.name);
-      if (matches.length > 1) {
-        throw new Error(`multiple managed projects named ${args.name}: ${matches.map((project) => project.path).join(", ")}`);
-      }
-      target = matches[0]?.path ?? target;
-    }
-
+  if (args.command === "deploy") {
+    const target = args.target ?? (await selectManagedTarget("deploy", args.name));
     const entry = await checkEntry(target);
     const project = await findProject(target);
     if (project.manifest.preset === "prototype-full" || project.manifest.preset === "dossier") {
@@ -646,22 +738,28 @@ export async function main(argv: string[]): Promise<number> {
         `${entry}: not the entry of the project at ${project.root}; deploy ${project.manifest.entry} or the project directory`,
       );
     }
+
+    const name =
+      args.name ??
+      project.manifest.deployment?.workerName ??
+      (await deriveWorkerName(project.root, project.manifest.name));
     const result = await deployWorker(target, entry, {
       account: args.account ?? project.manifest.deployment?.account,
-      name: args.name,
+      name,
     });
     await recordDeployment(project.root, {
       account: result.account,
       provider: "cloudflare-workers",
       url: result.url,
-      workerName: args.name,
+      workerName: name,
     });
     process.stdout.write(`Published ${result.url}\n`);
     return 0;
   }
 
   if (args.command === "preview") {
-    return await preview(args.target, args.root, args.port);
+    const target = args.target ?? (await selectManagedTarget("preview"));
+    return await preview(target, args.root, args.port);
   }
 
   process.stderr.write(`${usage}\n`);

@@ -94,14 +94,15 @@ if (args[0] === "--version") {
     await createPitch(path.resolve("test/fixtures/pitch"), projectEntry);
     await writeFile(path.join(project, "src", "source.txt"), "private source");
     await recordProject(project, "pitch", projectEntry, "0.1.0");
-    assert.equal(await main(["deploy", project, "--name", "blueprint-demo"]), 0);
-    const managedDeployment: { files: string[] } = JSON.parse(await readFile(log, "utf8"));
+    assert.equal(await main(["deploy", project]), 0);
+    const managedDeployment: { args: string[]; files: string[] } = JSON.parse(await readFile(log, "utf8"));
     assert.deepEqual(managedDeployment.files, ["index.html"]);
+    assert.equal(managedDeployment.args[managedDeployment.args.indexOf("--name") + 1], "managed");
 
     const originalCwd = process.cwd();
     process.chdir(directory);
     try {
-      assert.equal(await main(["deploy", "--name", "managed"]), 0);
+      assert.equal(await main(["deploy"]), 0);
     } finally {
       process.chdir(originalCwd);
     }
@@ -117,6 +118,14 @@ if (args[0] === "--version") {
     const app = path.join(directory, "app");
     const appEntry = await createScaffold("dossier", app);
     await recordProject(app, "dossier", appEntry, "0.1.0");
+    const projectPickerCwd = process.cwd();
+    process.chdir(directory);
+    try {
+      assert.equal(await main(["deploy", "--name", "slides"]), 0);
+      await assert.rejects(main(["deploy"]), /multiple managed projects available; pass a target path/);
+    } finally {
+      process.chdir(projectPickerCwd);
+    }
     await assert.rejects(
       main(["deploy", appEntry, "--name", "blueprint-demo"]),
       /run pnpm build and deploy/,
@@ -139,6 +148,14 @@ if (args[0] === "--version") {
       { id: "personal-id", name: "personal" },
       { id: "team-id", name: "team" },
     ]);
+    const recordedAccountCwd = process.cwd();
+    process.chdir(slidesProject);
+    try {
+      assert.equal(await main(["deploy"]), 0);
+    } finally {
+      process.chdir(recordedAccountCwd);
+    }
+    assert.equal(JSON.parse(await readFile(log, "utf8")).account, "personal-id");
     await assert.rejects(
       deployWorker(entry, await checkEntry(entry), { name: "blueprint-demo" }),
       /multiple Cloudflare accounts available.*personal, team/,
