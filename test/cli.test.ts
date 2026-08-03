@@ -16,6 +16,7 @@ import { language, validateFragment } from "../src/presets/shared.ts";
 import { recordProject } from "../src/project.ts";
 
 test("parses a safe local preview", () => {
+  assert.equal(parseArgs(["preview"]).target, undefined);
   assert.equal(parseArgs(["preview", "demo/index.html"]).port, 0);
   assert.deepEqual(
     parseArgs(["preview", "demo/index.html", "--root", "demo", "--port", "4175"]),
@@ -44,7 +45,13 @@ test("parses an explicit Worker deployment", () => {
       target: "dist",
     },
   );
-  assert.throws(() => parseArgs(["deploy", "dist"]), /--name is required/);
+  assert.deepEqual(parseArgs(["deploy"]), {
+    account: undefined,
+    command: "deploy",
+    name: undefined,
+    port: 0,
+    target: undefined,
+  });
 });
 
 test("parses project listing", () => {
