@@ -98,6 +98,14 @@ if (args[0] === "--version") {
     const managedDeployment: { files: string[] } = JSON.parse(await readFile(log, "utf8"));
     assert.deepEqual(managedDeployment.files, ["index.html"]);
 
+    const originalCwd = process.cwd();
+    process.chdir(directory);
+    try {
+      assert.equal(await main(["deploy", "--name", "managed"]), 0);
+    } finally {
+      process.chdir(originalCwd);
+    }
+
     const slidesProject = path.join(directory, "slides");
     await cp(path.resolve("test/fixtures/slides"), slidesProject, { recursive: true });
     const slidesEntry = await createSlides(slidesProject);

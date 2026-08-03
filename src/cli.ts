@@ -626,10 +626,19 @@ export async function main(argv: string[]): Promise<number> {
   }
 
   if (args.command === "deploy" && args.name) {
-    const entry = await checkEntry(args.target);
-    const project = await findProject(args.target);
+    let target = args.target;
+    if (target === ".") {
+      const matches = (await listProjects(target)).filter((project) => project.name === args.name);
+      if (matches.length > 1) {
+        throw new Error(`multiple managed projects named ${args.name}: ${matches.map((project) => project.path).join(", ")}`);
+      }
+      target = matches[0]?.path ?? target;
+    }
+
+    const entry = await checkEntry(target);
+    const project = await findProject(target);
     if (project.manifest.preset === "prototype-full" || project.manifest.preset === "dossier") {
-      if (path.resolve(args.target) !== path.join(project.root, "dist")) {
+      if (path.resolve(target) !== path.join(project.root, "dist")) {
         throw new Error(`${project.manifest.preset}: run pnpm build and deploy ${path.join(project.root, "dist")}`);
       }
     } else if (entry !== path.resolve(project.root, project.manifest.entry)) {
@@ -637,7 +646,7 @@ export async function main(argv: string[]): Promise<number> {
         `${entry}: not the entry of the project at ${project.root}; deploy ${project.manifest.entry} or the project directory`,
       );
     }
-    const result = await deployWorker(args.target, entry, {
+    const result = await deployWorker(target, entry, {
       account: args.account ?? project.manifest.deployment?.account,
       name: args.name,
     });
