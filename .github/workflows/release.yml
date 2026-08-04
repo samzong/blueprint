@@ -4,12 +4,19 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to publish to npm
+        required: true
+        type: string
 
 permissions:
   contents: write
 
 jobs:
   release:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -41,10 +48,13 @@ jobs:
 
   publish-npm:
     needs: release
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || needs.release.result == 'success') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/setup-node@v7
         with:
@@ -56,10 +66,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid release tag: $RELEASE_TAG" >&2
+            exit 1
+          fi
           mkdir release
-          asset="samzong-blueprint-${GITHUB_REF_NAME#v}.tgz"
-          gh release download "$GITHUB_REF_NAME" \
+          asset="samzong-blueprint-${RELEASE_TAG#v}.tgz"
+          gh release download "$RELEASE_TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --pattern "$asset" \
             --dir release
-          npm publish "release/$asset" --access public
+          npm publish "./release/$asset" --access public
