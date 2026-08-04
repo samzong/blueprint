@@ -3,6 +3,10 @@
   "version": "0.1.4",
   "description": "Deterministic web scaffolding, preview, and deployment for the blueprint agent skill.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/samzong/blueprint.git"
+  },
   "type": "module",
   "bin": {
     "blueprint": "./dist/bin.js"
