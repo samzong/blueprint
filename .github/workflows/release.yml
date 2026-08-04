@@ -38,3 +38,28 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "$GITHUB_REF_NAME" release/*.tgz --generate-notes --verify-tag
+
+  publish-npm:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Publish package to npm
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir release
+          asset="samzong-blueprint-${GITHUB_REF_NAME#v}.tgz"
+          gh release download "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern "$asset" \
+            --dir release
+          npm publish "release/$asset" --access public
