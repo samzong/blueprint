@@ -290,6 +290,48 @@ test("routes managed Vite projects through their dev server", async () => {
   }
 });
 
+test("accepts Artifact names for check and preview while existing paths win", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-managed-target-"));
+  const project = path.join(directory, "nested", "catalog");
+  const bin = path.join(directory, "bin");
+  const capture = path.join(directory, "gofs.json");
+  const originalCwd = process.cwd();
+  const originalPath = process.env.PATH;
+  const originalCapture = process.env.BLUEPRINT_PREVIEW_CAPTURE;
+  await mkdir(project, { recursive: true });
+  const entry = await createPitch(
+    fileURLToPath(new URL("fixtures/pitch", import.meta.url)),
+    path.join(project, "index.html"),
+  );
+  await recordProject(project, "pitch", entry, "0.1.0");
+  await mkdir(bin);
+  await writeFile(
+    path.join(bin, "gofs"),
+    `#!${process.execPath}\nrequire("node:fs").writeFileSync(process.env.BLUEPRINT_PREVIEW_CAPTURE, JSON.stringify(process.argv.slice(2)));\n`,
+    { mode: 0o755 },
+  );
+  process.chdir(directory);
+  process.env.PATH = bin;
+  process.env.BLUEPRINT_PREVIEW_CAPTURE = capture;
+
+  try {
+    assert.equal(await main(["check", "catalog"]), 0);
+    assert.equal(await main(["preview", "catalog", "--port", "43180"]), 0);
+    assert.ok(JSON.parse(await readFile(capture, "utf8")).includes(`/:${await realpath(project)}:ro:blueprint`));
+    await assert.rejects(main(["check", "missing"]), /no Artifact named missing/);
+    await assert.rejects(main(["check", "nested/missing.html"]), /ENOENT/);
+    await writeFile(path.join(directory, "catalog"), "<html><head></head>missing body");
+    await assert.rejects(main(["check", "catalog"]), /missing <body>/);
+  } finally {
+    process.chdir(originalCwd);
+    if (originalPath === undefined) delete process.env.PATH;
+    else process.env.PATH = originalPath;
+    if (originalCapture === undefined) delete process.env.BLUEPRINT_PREVIEW_CAPTURE;
+    else process.env.BLUEPRINT_PREVIEW_CAPTURE = originalCapture;
+    await rm(directory, { force: true, recursive: true });
+  }
+});
+
 test("creates a portable pitch from semantic source files", async () => {
   const fixture = fileURLToPath(new URL("fixtures/pitch", import.meta.url));
   const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-pitch-"));

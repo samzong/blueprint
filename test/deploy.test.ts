@@ -107,7 +107,8 @@ if (args[0] === "--version") {
       process.chdir(originalCwd);
     }
 
-    const slidesProject = path.join(directory, "slides");
+    const slidesProject = path.join(directory, "nested", "slides");
+    await mkdir(path.dirname(slidesProject), { recursive: true });
     await cp(path.resolve("test/fixtures/slides"), slidesProject, { recursive: true });
     const slidesEntry = await createSlides(slidesProject);
     await recordProject(slidesProject, "slides", slidesEntry, "0.1.0");
@@ -121,6 +122,7 @@ if (args[0] === "--version") {
     const projectPickerCwd = process.cwd();
     process.chdir(directory);
     try {
+      assert.equal(await main(["deploy", "slides"]), 0);
       assert.equal(await main(["deploy", "--project", "slides"]), 0);
       const redeployed: { args: string[] } = JSON.parse(await readFile(log, "utf8"));
       assert.equal(redeployed.args[redeployed.args.indexOf("--name") + 1], "blueprint-slides");
@@ -128,9 +130,9 @@ if (args[0] === "--version") {
         await readFile(path.join(slidesProject, ".blueprint.json"), "utf8"),
       );
       assert.equal(slidesManifest.deployment.workerName, "blueprint-slides");
-      await assert.rejects(main(["deploy", "--name", "slides"]), /multiple managed projects available; pass a target path or --project/);
-      await assert.rejects(main(["deploy"]), /multiple managed projects available; pass a target path or --project/);
-      await assert.rejects(main(["deploy", "--project", "missing"]), /no managed project named missing/);
+      await assert.rejects(main(["deploy", "--name", "slides"]), /multiple Artifacts available; pass an Artifact name, target path, or --project/);
+      await assert.rejects(main(["deploy"]), /multiple Artifacts available; pass an Artifact name, target path, or --project/);
+      await assert.rejects(main(["deploy", "--project", "missing"]), /no Artifact named missing/);
     } finally {
       process.chdir(projectPickerCwd);
     }

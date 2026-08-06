@@ -1,13 +1,13 @@
 # Theme: briefing
 
-Use the only supported briefing skin: neutral full-screen slides, subtle grid, explicit page labels, small radii, light borders, and restrained shadows. Let the compiler own its CSS, responsive behavior, and runtime.
+Use the fixed briefing Theme: neutral full-screen slides, subtle grid, explicit page labels, small radii, light borders, and restrained shadows. Let the compiler own its CSS, responsive behavior, and runtime.
 
 ## Visual language
 
 - Inter and Noto Sans SC for body text
 - JetBrains Mono for labels, dates, codes, and page numbers
 - optional Noto Serif SC through `.serif` for cover or divider headings
-- no dark full-page skin, oversized rounded cards, heavy shadows, or emoji icons
+- no dark full-page treatment, oversized rounded cards, heavy shadows, or emoji icons
 
 ## Semantic colors
 
@@ -19,9 +19,9 @@ Use the only supported briefing skin: neutral full-screen slides, subtle grid, e
 | `--coral` / `--coral-soft` | blocked, missing, incorrect |
 | `--highlight` | one short phrase per slide |
 
-## Slide contract
+## Component vocabulary
 
-Every source slide contains `.slide-tag` and `.slide-inner`; the compiler inserts `.slide-num`. The deck rail derives its label from `.slide-tag` or the heading, while `data-rail-title` is an optional override. Use `.cover`, `.section-divider`, and `.alt` only for their semantic roles.
+Use `.cover`, `.section-divider`, and `.alt` only for their semantic roles.
 
 Reuse these components before inventing new ones:
 

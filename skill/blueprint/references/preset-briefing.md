@@ -31,7 +31,7 @@ Use this contract for internal explanations, alignment, responsibility boundarie
 </section>
 ```
 
-Include exactly one `.slide.cover`, at least three content slides, and `.slide-tag` plus `.slide-inner` on every slide. The compiler inserts page numbers. Omit `data-rail-title` unless the navigation label should differ from the slide tag or heading. Use as many useful pages as the subject needs, and split a slide before its content crowds the viewport. `blueprint check` enforces a conservative static viewport content budget. The budget is a content-density heuristic, not rendered-layout proof.
+Include exactly one `.slide.cover`, at least three content slides, and `.slide-tag` plus `.slide-inner` on every slide. The compiler inserts page numbers and derives each deck rail label from the slide tag or heading. Omit `data-rail-title` unless that navigation label should differ. Use as many useful pages as the subject needs, and split a slide before its content crowds the viewport. `blueprint check` enforces a conservative static viewport content budget. The budget is a content-density heuristic, not rendered-layout proof.
 
 The compiler assigns positional IDs such as `slide-01` when a slide has no `id`. Add a concise explicit ID when its shared URL must remain stable as slides are reordered. Generated briefings keep the current slide in the URL hash and open directly to a valid slide hash.
 

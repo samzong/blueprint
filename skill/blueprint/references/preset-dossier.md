@@ -26,7 +26,7 @@ Keep the generated output semantic and maintainable. Production bundles, copied 
 - Add icon or motion dependencies only when the interface uses them.
 - Do not add state libraries, UI frameworks, CSS-in-JS, ESLint, Prettier, or Husky unless requested.
 
-## Entity-scoped theme colors
+## Entity color strategy
 
 Treat color as identity, not page decoration. Choose the color strategy from the completed information architecture:
 
