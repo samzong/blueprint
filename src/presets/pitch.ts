@@ -1,8 +1,21 @@
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { parse } from "parse5";
+
 import { deckLabels } from "../shared/i18n/deck.ts";
-import { escapeHtml as html, language, optionalFile, parseObject, requiredString, validateFragment } from "./shared.ts";
+import {
+  escapeHtml as html,
+  type HtmlElement,
+  type HtmlNode,
+  isElement,
+  language,
+  optionalFile,
+  parseObject,
+  requiredString,
+  validateFragment,
+  validatePresentationCapacity,
+} from "./shared.ts";
 
 type PitchConfig = {
   brand: string;
@@ -16,6 +29,24 @@ type PitchConfig = {
 };
 
 export const pitchRequiredSections = ["hero", "solution", "cta"] as const;
+const repeatedPitchClasses = new Set([
+  "hero-fact",
+  "loop-step",
+  "metric",
+  "principle",
+  "problem-row",
+  "stack-card",
+  "starter-card",
+  "vision-line",
+]);
+const sectionLabelClasses = new Set(["eyebrow", "hero-kicker", "meta-tag"]);
+const pitchCapacityProfile = {
+  budget: 160,
+  consequence: "scroll",
+  labelClasses: sectionLabelClasses,
+  repeatedClasses: repeatedPitchClasses,
+  unit: "section",
+} as const;
 
 function optionalString(config: Record<string, unknown>, field: string, filename: string): string | undefined {
   const value = config[field];
@@ -84,11 +115,25 @@ export function validatePitchSections(content: string, filename: string): void {
   }
 }
 
+function validatePitchSectionCapacity(html: string, filename: string): void {
+  const document = parse(html);
+  const pending: HtmlNode[] = [...document.childNodes];
+  const sections: HtmlElement[] = [];
+  for (const node of pending) {
+    if (!isElement(node)) continue;
+    pending.push(...node.childNodes);
+    if ("content" in node) pending.push(...node.content.childNodes);
+    if (node.tagName === "section") sections.push(node);
+  }
+  validatePresentationCapacity(sections, filename, pitchCapacityProfile);
+}
+
 export function checkPitchOutput(html: string, filename: string): void {
   validatePitchSections(html, filename);
   if (!/\bdata-deck-selector=(["'])section\1/i.test(html)) {
     throw new Error(`${filename}: missing data-deck-selector="section"`);
   }
+  validatePitchSectionCapacity(html, filename);
 }
 
 function validateContent(content: string, filename: string): void {
