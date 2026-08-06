@@ -1,0 +1,50 @@
+%% blueprint — CLI + Agent Skill architecture
+%% Single source of truth for this repository's system boundary.
+%% UPDATE THIS FILE in the same change whenever the architecture changes.
+%% See README.md in this directory.
+flowchart TB
+    classDef actor fill:#1f2937,stroke:#94a3b8,stroke-width:1px,color:#e5e7eb
+    classDef skill fill:#241b3a,stroke:#a78bfa,stroke-width:1px,color:#ede9fe
+    classDef cli fill:#0b3b4a,stroke:#22d3ee,stroke-width:1px,color:#e0f2fe
+    classDef catalog fill:#3b2f0b,stroke:#fbbf24,stroke-width:1px,color:#fef3c7
+    classDef artifact fill:#14532d,stroke:#4ade80,stroke-width:1px,color:#dcfce7
+    classDef external fill:#2f1d12,stroke:#fb923c,stroke-width:1px,color:#ffedd5
+
+    User["User"]:::actor
+    Agent["Host coding agent"]:::actor
+
+    Skill["Bundled Agent Skill<br/>preset selection · research · writing<br/>upgrade merge · visual judgment"]:::skill
+    Refs["Skill references<br/>preset-*.md · theme-*.md<br/>design-system.md"]:::skill
+
+    subgraph CLI["blueprint CLI"]
+        direction TB
+        Commands["Commands<br/>create · check · preview<br/>deploy · list · skill install"]:::cli
+        Compiler["Presets + compiler / scaffold<br/>src/presets · shared chrome"]:::cli
+        Validator["Validator<br/>check + preset contracts"]:::cli
+        Manifest["Project manifest owner<br/>.blueprint.json schema"]:::cli
+        Commands --> Compiler
+        Commands --> Validator
+        Commands -->|"reads / writes"| Manifest
+    end
+
+    Catalog["Product catalog<br/>Presets · Preset-scoped Themes<br/>cross-Preset design system"]:::catalog
+
+    Artifact["Managed Artifact<br/>sources · entry · chrome/runtime"]:::artifact
+    ProjectMeta[".blueprint.json<br/>identity · preset · createdWith<br/>deployment record"]:::artifact
+
+    Preview["Local preview<br/>gofs or Vite"]:::external
+    Wrangler["Cloudflare Workers<br/>Static Assets deploy"]:::external
+
+    User --> Agent
+    Agent --> Skill
+    Skill --> Refs
+    Skill -->|"invokes"| Commands
+    Refs -.->|"contracts"| Catalog
+    Compiler --> Catalog
+    Validator --> Catalog
+    Compiler --> Artifact
+    Validator --> Artifact
+    Manifest --> ProjectMeta
+    Artifact --- ProjectMeta
+    Commands -->|"preview"| Preview
+    Commands <-->|"deploy / verified URL"| Wrangler
