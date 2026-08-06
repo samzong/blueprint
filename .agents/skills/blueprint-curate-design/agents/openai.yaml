@@ -1,0 +1,4 @@
+interface:
+  display_name: "Blueprint Curate Design"
+  short_description: "Assess designs for Blueprint catalog admission"
+  default_prompt: "Use $blueprint-curate-design to assess this design reference against the current Blueprint catalog."

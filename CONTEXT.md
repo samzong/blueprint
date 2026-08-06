@@ -47,6 +47,16 @@ Preset- or compiler-owned navigation, progress, controls, routing, search, and o
 - If an interpretation would add a Preset, Theme selector, manifest field, or compatibility obligation, surface it as a product decision before implementation.
 - Treat an exact supported Preset or Theme ID as literal.
 
+## Catalog growth model
+
+Blueprint's reusable product catalog consists primarily of Presets and Preset-scoped Themes.
+
+- Add or extend a Preset when the delivery form, semantic source shape, generator, compiler or scaffold, runtime ownership, validation, build, or deployment contract changes.
+- Add a Theme within an existing Preset when the Artifact contract stays the same and a visual system recurs across independent Artifacts.
+- Keep one-off visual requests as Artifact-specific visual direction or CSS. Do not add them to the catalog.
+- Promote foundations shared by multiple Presets into the design system rather than duplicating them across Themes.
+- Scope every Theme to a Preset. Do not introduce a universal cross-Preset Theme without a proven shared contract.
+
 ## Sources of truth
 
 - Supported Preset IDs: `src/project.ts`
