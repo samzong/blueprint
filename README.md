@@ -7,12 +7,16 @@ blueprint turns a conversational web brief into deterministic, portable output.
 
 ## Showcase
 
-Blueprint currently ships four visual theme families. Click a screenshot to open the live output.
+The examples below show selected Preset outputs. Click a screenshot to open the live Artifact.
 
-| Pitch | Briefing | Archive(Win 98) |
-|---|---|---|
-| [![Lathe pitch](docs/showcase/pitch.png)](https://lathe-ai-native-pitch.samzong.workers.dev/) | [![Blueprint briefing](docs/showcase/briefing.png)](https://blueprint-session-briefing.samzong.workers.dev/) | [![Mosoo archive](docs/showcase/archive.png)](https://mosoo-product-inquiry.samzong.workers.dev/) |
-| [Lathe](https://github.com/lathe-cli/lathe) · `pitch` | [Blueprint](https://github.com/samzong/blueprint) · `briefing` | [Mosoo](https://github.com/langgenius/mosoo) · `archive` |
+
+| Pitch                                                             | Briefing                                                                      | Archive(Win 98)                                                     |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| [Lathe pitch](https://lathe-ai-native-pitch.samzong.workers.dev/) | [Blueprint briefing](https://blueprint-session-briefing.samzong.workers.dev/) | [Mosoo archive](https://mosoo-product-inquiry.samzong.workers.dev/) |
+| [Lathe](https://github.com/lathe-cli/lathe) · `pitch`             | [Blueprint](https://github.com/samzong/blueprint) · `briefing`                | [Mosoo](https://github.com/langgenius/mosoo) · `archive`            |
+
+
+
 
 ## Install
 
@@ -30,6 +34,8 @@ Copy this prompt to your agent:
 Install Blueprint and its bundled Agent Skill for your current agent: run brew tap samzong/tap, brew trust samzong/tap, brew install blueprint, and blueprint skill install, then verify the installation with blueprint --version.
 ```
 
+
+
 ## Quick start
 
 ```bash
@@ -41,15 +47,19 @@ blueprint --help
 
 Available presets:
 
-| Preset | Output |
-|---|---|
-| `pitch` | Compiled single-file story |
-| `briefing` | Compiled single-file slide deck |
-| `slides` | Compiled single-file Reveal.js presentation with themes, optional brand/language chrome, and speaker notes |
-| `archive` | Compiled searchable Markdown reader |
-| `prototype-lite` | Single-file React prototype |
-| `prototype-full` | Vite + React + TypeScript prototype |
-| `dossier` | Maintained Vite + React + TypeScript report |
+
+| Preset           | Output                                                                                            | Theme model                                                           |
+| ---------------- | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `pitch`          | Compiled single-file story                                                                        | No named Theme; shared design system and fixed Preset baseline        |
+| `briefing`       | Compiled single-file slide deck                                                                   | Fixed `briefing` Theme                                                |
+| `slides`         | Compiled single-file Reveal.js presentation with optional brand/language chrome and speaker notes | Configured `dify-x` Theme; currently the only supported value         |
+| `archive`        | Compiled searchable Markdown reader                                                               | Fixed `win98-web` Theme                                               |
+| `prototype-lite` | Single-file React prototype                                                                       | No named Theme; Artifact-specific styling on the shared design system |
+| `prototype-full` | Vite + React + TypeScript prototype                                                               | No named Theme; Artifact-specific styling on the shared design system |
+| `dossier`        | Maintained Vite + React + TypeScript report                                                       | No named Theme; Artifact-specific styling and entity color strategy   |
+
+
+A Preset is the Artifact contract, not a visual style. Only `slides` currently exposes a Theme field; `briefing` and `archive` use fixed Themes. See [CONTEXT.md](CONTEXT.md) for canonical terminology and ownership.
 
 Every successful `create` writes `.blueprint.json` with the project identity, entry point, preset, last verified preset version, and latest verified deployment. Rebuilding preserves the project ID, version marker, and deployment record; the bundled skill advances `createdWith` only after a verified upgrade.
 
@@ -98,6 +108,8 @@ blueprint directly uses:
 - [@kitup/sdk](https://github.com/lathe-cli/kitup) for bundled Agent Skill installation
 - [Wrangler](https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler) and [Cloudflare Workers](https://developers.cloudflare.com/workers/) for deployment
 
+
+
 ## License
 
-MIT
+[MIT](LICENSE)

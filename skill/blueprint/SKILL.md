@@ -15,6 +15,8 @@ description: >
 
 Use the `blueprint` CLI for deterministic scaffolding, compilation, validation, preview, discovery, and deployment. Handle intent, content, and visual judgment in the Skill.
 
+When present, use the repository `CONTEXT.md` as the canonical terminology source. A Preset selects an Artifact contract, a Theme is reusable visual language within that contract, and CSS is an implementation mechanism. When a user informally says "CSS", "theme", "skin", "look", or "style", treat it as a visual direction unless they explicitly request stylesheet work or name a supported Theme.
+
 ## Route the request
 
 - For a new project or content rebuild, follow **Create or rebuild**.
@@ -44,7 +46,7 @@ Ask at most one blocking question and only for missing information that changes 
 
 Ask for the primary audience or delivery form only when multiple rows or none match.
 
-An explicit request for slides, PPT, Reveal.js, speaker notes, or stage delivery selects `slides` even when the subject could also fit `pitch` or `briefing`. Choose `prototype-lite` for one page with at most three core interaction states. Choose `prototype-full` for multiple views or sustained iteration. Default to `prototype-lite`. Use the `dify-x` theme for `slides`; do not ask for a skin while it is the only supported slides theme. Do not ask for a skin for `briefing` or `archive`.
+An explicit request for slides, PPT, Reveal.js, speaker notes, or stage delivery selects `slides` even when the subject could also fit `pitch` or `briefing`. Choose `prototype-lite` for one page with at most three core interaction states. Choose `prototype-full` for multiple views or sustained iteration. Default to `prototype-lite`. Use the `dify-x` Theme for `slides`; do not ask the user to choose a Theme while it is the only supported slides Theme. `briefing` and `archive` use fixed Themes, so do not ask for a Theme choice.
 
 For `slides`, inspect the supplied material for real organization, product, partner, event, and language requirements before writing. Configure optional brand chrome only from verified local assets. Configure multiple locales only when requested or supported by source material, keep their slide topology aligned, and write each language for its audience instead of translating line by line. Never invent logos, partners, presenters, translations, citations, or image credits.
 

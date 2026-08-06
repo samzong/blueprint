@@ -1,5 +1,10 @@
 # Repository Guidelines
 
+## Product Context
+
+- Read `CONTEXT.md` before non-trivial work and use its canonical terminology in code, documentation, planning, and reviews.
+- Do not treat a topic, layout, visual direction, or CSS implementation as a new Preset or Theme without crossing the product-decision boundary explicitly.
+
 ## Localization
 
 - Do not add CJK literals outside recognized localization paths.

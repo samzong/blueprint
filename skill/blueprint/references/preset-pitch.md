@@ -34,7 +34,7 @@ Use `src/style.css` only for topic-specific layout. Reuse compiler classes and s
 
 ## Reusable components
 
-The pitch theme provides opt-in presentation classes for technical product stories:
+The pitch visual system provides opt-in presentation classes for technical product stories:
 
 - `hero`, `hero-kicker`, `hero-sub`, `hero-facts`, and `hero-fact`
 - `problem-grid`, `problem-stack`, `problem-row`, and `callout`

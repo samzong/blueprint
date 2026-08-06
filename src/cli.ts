@@ -89,19 +89,21 @@ Options:
   blueprint check [target]
 
 Arguments:
-  target  HTML file or project directory; omit to choose a managed project
+  target  Artifact name, entry file, or directory;
+          omit to choose an Artifact
 
 Options:
-  --project <name>  Managed project name when target is omitted
+  --project <name>  Artifact name when target is omitted
   -h, --help        Show this help`,
   preview: `Usage:
   blueprint preview [target] [options]
 
 Arguments:
-  target  HTML file or project directory; omit to choose a managed project
+  target  Artifact name, entry file, or directory;
+          omit to choose an Artifact
 
 Options:
-  --project <name>  Managed project name when target is omitted
+  --project <name>  Artifact name when target is omitted
   --root <path>     Additional filesystem root
   --port <port>     Local port (default: auto-selected)
   -h, --help        Show this help`,
@@ -109,10 +111,11 @@ Options:
   blueprint deploy [target] [options]
 
 Arguments:
-  target  Project entry or project directory; omit to choose a managed project
+  target  Artifact name, entry file, or directory;
+          omit to choose an Artifact
 
 Options:
-  --project <name>          Managed project name when target is omitted
+  --project <name>          Artifact name when target is omitted
   --name <name>             Worker name (default: recorded or derived)
   --account <name-or-id>    Cloudflare account
   -h, --help                Show this help`,
@@ -183,7 +186,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
 
     if (value === "--project" && (command === "check" || command === "preview" || command === "deploy")) {
       project = rest[++index];
-      if (!project || project.startsWith("-")) throw new Error("--project requires a managed project name");
+      if (!project || project.startsWith("-")) throw new Error("--project requires an Artifact name");
       continue;
     }
 
@@ -539,6 +542,22 @@ async function targetForProject(root: string, preset: ProjectPreset, command: Ma
   return target;
 }
 
+async function resolveArtifactTarget(
+  command: ManagedCommand,
+  target: string | undefined,
+  preferredName: string | undefined,
+): Promise<string> {
+  if (!target || preferredName) return await selectManagedTarget(command, preferredName);
+
+  try {
+    await stat(target);
+    return target;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT" || path.basename(target) !== target) throw error;
+  }
+  return await selectManagedTarget(command, target);
+}
+
 async function selectManagedTarget(command: ManagedCommand, preferredName?: string): Promise<string> {
   if (!preferredName) {
     const current = await findProjectOrNull(".");
@@ -549,7 +568,7 @@ async function selectManagedTarget(command: ManagedCommand, preferredName?: stri
     (left, right) => (left.name ?? left.path).localeCompare(right.name ?? right.path) || left.path.localeCompare(right.path),
   );
   if (projects.length === 0) {
-    throw new Error(`no managed projects found under ${path.resolve(".")}; pass a target path`);
+    throw new Error(`no Artifacts found under ${path.resolve(".")}; pass a target path`);
   }
 
   const rows = await Promise.all(
@@ -578,23 +597,23 @@ async function selectManagedTarget(command: ManagedCommand, preferredName?: stri
   );
   const candidates = preferredName ? rows.filter((row) => row.project.name === preferredName) : rows;
   if (preferredName && candidates.length === 0) {
-    throw new Error(`no managed project named ${preferredName} under ${path.resolve(".")}`);
+    throw new Error(`no Artifact named ${preferredName} under ${path.resolve(".")}`);
   }
   const available = candidates.filter((row) => !row.choice.disabled);
   const unavailable = candidates.filter((row) => row.choice.disabled);
   if (available.length === 1) return available[0].target;
   if (available.length === 0) {
     throw new Error(
-      `no usable managed projects found under ${path.resolve(".")}: ${candidates
+      `no usable Artifacts found under ${path.resolve(".")}: ${candidates
         .map((row) => `${row.choice.name}: ${row.choice.disabled}`)
         .join("; ")}`,
     );
   }
 
   return await chooseOne(
-    `Select a project to ${command}`,
+    `Select an Artifact to ${command}`,
     [...available, ...unavailable].map((row) => row.choice),
-    `multiple managed projects available; pass a target path or --project <name>: ${available
+    `multiple Artifacts available; pass an Artifact name, target path, or --project <name>: ${available
       .map((row) => `${row.choice.name} (${row.project.path})`)
       .join(", ")}`,
   );
@@ -738,14 +757,14 @@ export async function main(argv: string[]): Promise<number> {
   }
 
   if (args.command === "check") {
-    const target = args.target ?? (await selectManagedTarget("check", args.project));
+    const target = await resolveArtifactTarget("check", args.target, args.project);
     const entry = await checkEntry(target);
     process.stdout.write(`OK ${entry}\n`);
     return 0;
   }
 
   if (args.command === "deploy") {
-    const target = args.target ?? (await selectManagedTarget("deploy", args.project));
+    const target = await resolveArtifactTarget("deploy", args.target, args.project);
     const entry = await checkEntry(target);
     const project = await findProject(target);
     if (project.manifest.preset === "prototype-full" || project.manifest.preset === "dossier") {
@@ -777,7 +796,7 @@ export async function main(argv: string[]): Promise<number> {
   }
 
   if (args.command === "preview") {
-    const target = args.target ?? (await selectManagedTarget("preview", args.project));
+    const target = await resolveArtifactTarget("preview", args.target, args.project);
     return await preview(target, args.root, args.port);
   }
 

@@ -19,8 +19,15 @@ Use this contract for a searchable, downloadable collection of Markdown document
 - `lang`: valid language tag; defaults to `en`
 - `downloadName`: ZIP filename; defaults to `<project>.zip`
 
-The compiler recursively embeds `src/docs`, ignores hidden paths and `node_modules`, places a root `README.md` first, and derives labels from the first H1 or filename. The generated file includes the theme, renderer, hash routing, search, ZIP download, and optional Mermaid loader; it must not fetch source documents at runtime.
+The compiler recursively embeds `src/docs`, ignores hidden paths and `node_modules`, places a root `README.md` first, and derives labels from the first H1 or filename. The generated file includes the fixed `win98-web` Theme and compiler-owned renderer and runtime; it must not fetch source documents at runtime.
 The archive chrome follows `lang`: Chinese projects use Chinese search, download, count, and empty-state labels; other languages use the English fallback.
+
+## Runtime behavior
+
+- Search filters titles and paths immediately.
+- Hash routes preserve direct links and reloads.
+- ZIP download preserves relative Markdown paths.
+- Mermaid loads only when the active document contains a diagram.
 
 ## Build
 
