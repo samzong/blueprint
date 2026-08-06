@@ -42,6 +42,105 @@ export function hasClass(element: HtmlElement, name: string): boolean {
   );
 }
 
+type PresentationCapacityProfile = {
+  budget: number;
+  consequence: string;
+  ignoredClasses?: ReadonlySet<string>;
+  labelClasses?: ReadonlySet<string>;
+  repeatedClasses?: ReadonlySet<string>;
+  repeatedClassWeights?: ReadonlyMap<string, number>;
+  unit: "section" | "slide";
+};
+
+function hasAnyClass(element: HtmlElement, names: ReadonlySet<string> | undefined): boolean {
+  if (!names) return false;
+  for (const name of names) {
+    if (hasClass(element, name)) return true;
+  }
+  return false;
+}
+
+function capacityElements(element: HtmlElement, ignoredClasses: ReadonlySet<string> | undefined): HtmlElement[] {
+  const elements: HtmlElement[] = [];
+  const pending: HtmlNode[] = [...element.childNodes];
+  for (const node of pending) {
+    if (!isElement(node) || hasAnyClass(node, ignoredClasses)) continue;
+    elements.push(node);
+    pending.push(...node.childNodes);
+    if ("content" in node) pending.push(...node.content.childNodes);
+  }
+  return elements;
+}
+
+function capacityText(node: HtmlNode, ignoredClasses: ReadonlySet<string> | undefined): string {
+  if ("value" in node) return node.value;
+  if (!("childNodes" in node) || (isElement(node) && hasAnyClass(node, ignoredClasses))) return "";
+  return node.childNodes.map((child) => capacityText(child, ignoredClasses)).join(" ");
+}
+
+function contentTokens(value: string): number {
+  const cjkRuns = value.match(/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]+/gu) ?? [];
+  const otherTokens =
+    value
+      .replace(/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]+/gu, " ")
+      .match(/[\p{L}\p{N}]+(?:['’.-][\p{L}\p{N}]+)*/gu)?.length ?? 0;
+  return otherTokens + cjkRuns.reduce((total, run) => total + Math.ceil(Array.from(run).length / 3), 0);
+}
+
+function presentationCapacityCost(section: HtmlElement, profile: PresentationCapacityProfile): number {
+  const elements = capacityElements(section, profile.ignoredClasses);
+  const heading = elements.find((element) => element.tagName === "h1" || element.tagName === "h2");
+  const headingLength = heading
+    ? Array.from(capacityText(heading, profile.ignoredClasses).replace(/\s+/gu, "")).length
+    : 0;
+  const directBlocks = section.childNodes.filter(
+    (node) =>
+      isElement(node) &&
+      !hasAnyClass(node, profile.ignoredClasses) &&
+      node.tagName !== "h1" &&
+      node.tagName !== "h2" &&
+      !hasAnyClass(node, profile.labelClasses),
+  ).length;
+  const repeatedItemCost = elements.reduce((total, element) => {
+    for (const [name, cost] of profile.repeatedClassWeights ?? []) {
+      if (hasClass(element, name)) return total + cost;
+    }
+    const repeated =
+      element.tagName === "article" ||
+      element.tagName === "li" ||
+      element.tagName === "tr" ||
+      hasAnyClass(element, profile.repeatedClasses);
+    return total + (repeated ? 4 : 0);
+  }, 0);
+  const forcedBreaks = elements.filter((element) => element.tagName === "br").length;
+
+  return (
+    contentTokens(capacityText(section, profile.ignoredClasses)) +
+    headingLength +
+    directBlocks * 10 +
+    repeatedItemCost +
+    forcedBreaks * 8
+  );
+}
+
+export function validatePresentationCapacity(
+  sections: HtmlElement[],
+  filename: string,
+  profile: PresentationCapacityProfile,
+): void {
+  const oversized: string[] = [];
+  for (const [index, section] of sections.entries()) {
+    const cost = presentationCapacityCost(section, profile);
+    if (cost <= profile.budget) continue;
+    const id = section.attrs.find((attribute) => attribute.name === "id")?.value;
+    const reference = id ? `#${id}` : String(index + 1);
+    oversized.push(
+      `${profile.unit} ${reference} exceeds the viewport content budget (${cost} > ${profile.budget}) and is likely to ${profile.consequence}; split it into another ${profile.unit}`,
+    );
+  }
+  if (oversized.length > 0) throw new Error(`${filename}: ${oversized.join("; ")}`);
+}
+
 export function assertSafeUrl(
   element: HtmlElement,
   attribute: { name: string; value: string },

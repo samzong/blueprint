@@ -82,7 +82,7 @@ Use `src/style.css` only for topic-specific geometry, connectors, image crops, o
 
 - Outline the narrative before writing markup.
 - Give every slide one repeatable claim and one visual job.
-- Default to 8–16 slides unless the requested talk length requires otherwise.
+- Let the talk length and narrative determine the slide count; split a slide before its content crowds the viewport. `blueprint check` enforces a conservative static viewport content budget. The budget is a content-density heuristic, not rendered-layout proof.
 - Keep body copy readable from a room; move supporting detail into speaker notes.
 - Prefer diagrams, comparisons, metrics, product evidence, and real visual assets over bullet walls.
 - Alternate dense technical pages with lighter evidence, image, statement, or chapter pages when the material supports it.

@@ -21,12 +21,21 @@ import {
   requiredString,
   urlAttributes,
   validateFragment,
+  validatePresentationCapacity,
 } from "./shared.ts";
 
 type BriefingConfig = {
   lang: string;
   title: string;
 };
+
+const briefingCapacityProfile = {
+  budget: 160,
+  consequence: "scroll",
+  ignoredClasses: new Set(["slide-num", "slide-tag"]),
+  repeatedClasses: new Set(["callout", "card", "metric", "stage"]),
+  unit: "slide",
+} as const;
 
 function parseConfig(raw: string, filename: string): BriefingConfig {
   const config = parseObject(raw, filename);
@@ -178,6 +187,7 @@ export function checkBriefingOutput(html: string, filename: string): void {
       (node): node is Element => isElement(node) && node.tagName === "section" && hasClass(node, "slide"),
     ) ?? [];
   validateSlides(slides, filename, true, hashEnabled);
+  validatePresentationCapacity(slides, filename, briefingCapacityProfile);
 
   for (const element of elements) {
     if (element.tagName === "iframe") {

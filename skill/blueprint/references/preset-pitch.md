@@ -28,7 +28,7 @@ Use this contract for investor narratives, product introductions, launches, and 
 }
 ```
 
-`sections.html` contains only section markup. Do not include document chrome, styles, scripts, navigation, or footer. Include `hero`, `solution`, and `cta` section IDs, with 4–7 real sections total.
+`sections.html` contains only section markup. Do not include document chrome, styles, scripts, navigation, or footer. Include `hero`, `solution`, and `cta` section IDs. Use as many real sections as the story needs; split a section before its heading, prose, and repeated components exceed one desktop viewport. `blueprint check` enforces a conservative static viewport content budget and tells the author to split likely-overflowing sections. The budget is a content-density heuristic, not rendered-layout proof.
 
 Use `src/style.css` only for topic-specific layout. Reuse compiler classes and shared tokens; do not copy deck CSS or runtime.
 

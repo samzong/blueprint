@@ -20,6 +20,7 @@ import {
   requiredString,
   urlAttributes,
   validateFragment,
+  validatePresentationCapacity,
 } from "./shared.ts";
 
 const nodeRequire = createRequire(import.meta.url);
@@ -28,6 +29,21 @@ const revealUrlAttributes = new Set(["data-background-image", "data-background-v
 const unsupportedRevealAttributes = new Set(["data-src", "data-preview-image", "data-preview-video", "data-preview-link", "data-notes"]);
 const themes = {
   "dify-x": new URL("./slides-dify-x.css", import.meta.url),
+} as const;
+const slidesCapacityProfile = {
+  budget: 240,
+  consequence: "be clipped",
+  ignoredClasses: new Set(["notes"]),
+  repeatedClasses: new Set([
+    "architecture-node",
+    "card",
+    "evidence-verdict",
+    "flow-step",
+    "panel",
+    "timeline-item",
+  ]),
+  repeatedClassWeights: new Map([["metric", 16]]),
+  unit: "slide",
 } as const;
 
 type SlidesTheme = keyof typeof themes;
@@ -299,7 +315,9 @@ export function checkSlidesOutput(html: string, filename: string): void {
   const reveal = elements.find((element) => hasClass(element, "reveal"));
   const slides = reveal?.childNodes.find((node): node is Element => isElement(node) && hasClass(node, "slides"));
   if (!slides) throw new Error(`${filename}: missing .reveal > .slides`);
-  const topology = JSON.stringify(sectionTopology(validateSectionChildren(slides.childNodes, filename)));
+  const primarySections = validateSectionChildren(slides.childNodes, filename);
+  validatePresentationCapacity(leafSlides(primarySections), filename, slidesCapacityProfile);
+  const topology = JSON.stringify(sectionTopology(primarySections));
   for (const template of elements.filter(
     (element) => element.tagName === "template" && element.attrs.some((attribute) => attribute.name === "data-slides-lang"),
   )) {
@@ -314,9 +332,10 @@ export function checkSlidesOutput(html: string, filename: string): void {
     ) {
       throw new Error(`${filename}: invalid locale template`);
     }
-    const localeTopology = JSON.stringify(
-      sectionTopology(validateSectionChildren(content.childNodes as Node[], `${filename}: locale ${lang}`)),
-    );
+    const localeFilename = `${filename}: locale ${lang}`;
+    const localeSections = validateSectionChildren(content.childNodes as Node[], localeFilename);
+    validatePresentationCapacity(leafSlides(localeSections), localeFilename, slidesCapacityProfile);
+    const localeTopology = JSON.stringify(sectionTopology(localeSections));
     if (localeTopology !== topology) {
       throw new Error(`${filename}: locale ${JSON.stringify(lang)} must match the default slide topology`);
     }
@@ -331,6 +350,15 @@ function sectionTopology(sections: Element[]): number[] {
   return sections.map(
     (section) => section.childNodes.filter((node) => isElement(node) && node.tagName === "section").length,
   );
+}
+
+function leafSlides(sections: Element[]): Element[] {
+  return sections.flatMap((section) => {
+    const nested = section.childNodes.filter(
+      (node): node is Element => isElement(node) && node.tagName === "section",
+    );
+    return nested.length > 0 ? nested : [section];
+  });
 }
 
 

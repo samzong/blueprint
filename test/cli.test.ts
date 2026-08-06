@@ -499,6 +499,15 @@ test("adds optional brand chrome and portable language switching", async () => {
 
   const brokenLocale = generated.replace(/(<template data-slides-lang="en">\s*)<section>/, "$1<div>");
   assert.throws(() => checkSlidesOutput(brokenLocale, entry), /locale en: slides must contain only top-level <section>/);
+
+  const overloadedLocale = generated.replace(
+    /(<template data-slides-lang="en">\s*<section>)/,
+    `$1<h2>${"Dense content ".repeat(120)}</h2>`,
+  );
+  assert.throws(
+    () => checkSlidesOutput(overloadedLocale, entry),
+    /locale en: slide 1 exceeds the viewport content budget .* and is likely to be clipped/,
+  );
 });
 
 test("rejects invalid slides themes, wrappers, and local CSS assets", async () => {
@@ -750,6 +759,66 @@ test("managed check enforces pitch sections after the project is recorded", asyn
   await assert.rejects(checkEntry(project), /missing required section #cta/);
 });
 
+test("managed check rejects pitch sections that exceed the viewport content budget", async () => {
+  const fixture = fileURLToPath(new URL("fixtures/pitch", import.meta.url));
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-check-pitch-density-"));
+  const project = path.join(directory, "project");
+  const entry = await createPitch(fixture, path.join(directory, "dist", "custom.html"));
+  await mkdir(project);
+  await recordProject(project, "pitch", entry, "0.1.0");
+
+  const html = (await readFile(entry, "utf8")).replace(
+    /(<section\b[^>]*\bid=(["'])solution\2[^>]*>)/i,
+    `$1<h2>${"Dense content ".repeat(80)}</h2>`,
+  );
+  await writeFile(entry, html);
+
+  await assert.rejects(
+    checkEntry(project),
+    /section #solution exceeds the viewport content budget .* and is likely to scroll; split it into another section/,
+  );
+});
+
+test("managed check accepts moderate pitch content without h1 or h2", async () => {
+  const fixture = fileURLToPath(new URL("fixtures/pitch", import.meta.url));
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-check-pitch-heading-"));
+  const project = path.join(directory, "project");
+  const entry = await createPitch(fixture, path.join(directory, "dist", "custom.html"));
+  await mkdir(project);
+  await recordProject(project, "pitch", entry, "0.1.0");
+
+  const replacement = `<section id="solution"><h3>Supporting detail</h3><p>${"Body copy ".repeat(30)}</p><div class="metric">One</div><div class="metric">Two</div></section>`;
+  const html = (await readFile(entry, "utf8")).replace(
+    /<section\b[^>]*\bid=(["'])solution\1[^>]*>[\s\S]*?<\/section>/i,
+    replacement,
+  );
+  await writeFile(entry, html);
+
+  assert.equal(await checkEntry(project), entry);
+});
+
+test("managed check accepts moderate CJK pitch content", async () => {
+  const fixture = fileURLToPath(new URL("fixtures/pitch", import.meta.url));
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-check-pitch-cjk-density-"));
+  const project = path.join(directory, "project");
+  const entry = await createPitch(fixture, path.join(directory, "dist", "custom.html"));
+  await mkdir(project);
+  await recordProject(project, "pitch", entry, "0.1.0");
+
+  const cjk = String.fromCodePoint(0x754c).repeat(150);
+  const replacement = `<section id="solution"><h2>Solution</h2><p>${cjk}</p></section>`;
+  const html = (await readFile(entry, "utf8")).replace(
+    /<section\b[^>]*\bid=(["'])solution\1[^>]*>[\s\S]*?<\/section>/i,
+    replacement,
+  );
+  await writeFile(entry, html);
+
+  assert.equal(await checkEntry(project), entry);
+
+  await writeFile(entry, html.replace(cjk, cjk.repeat(4)));
+  await assert.rejects(checkEntry(project), /section #solution exceeds the viewport content budget/);
+});
+
 test("create preserves managed output when the requested preset conflicts", async () => {
   const fixture = fileURLToPath(new URL("fixtures/briefing", import.meta.url));
   const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-create-conflict-"));
@@ -773,7 +842,18 @@ test("managed check enforces briefing slide chrome", async () => {
   const entry = await createBriefing(fixture, path.join(directory, "index.html"));
   await recordProject(directory, "briefing", entry, "0.1.0");
 
-  let html = await readFile(entry, "utf8");
+  const original = await readFile(entry, "utf8");
+  const overloaded = original.replace(
+    /(<section\b(?=[^>]*\bid="portable-output")[^>]*>[\s\S]*?<div class="slide-inner">)/,
+    `$1<h2>${"Dense content ".repeat(80)}</h2>`,
+  );
+  await writeFile(entry, overloaded);
+  await assert.rejects(
+    checkEntry(entry),
+    /slide #portable-output exceeds the viewport content budget .* and is likely to scroll; split it into another slide/,
+  );
+
+  let html = original;
   html = html.replace(' data-blueprint-preset="briefing"', "");
   await writeFile(entry, html);
   assert.equal(await checkEntry(entry), entry);
@@ -794,10 +874,36 @@ test("managed check enforces the slides runtime and portable output", async () =
   await recordProject(directory, "slides", entry, "0.1.0");
 
   const html = await readFile(entry, "utf8");
+  const overloaded = html.replace(
+    /(<div class="slides">\s*<section>)/,
+    `$1<h2>${"Dense content ".repeat(120)}</h2>`,
+  );
+  await writeFile(entry, overloaded);
+  await assert.rejects(
+    checkEntry(entry),
+    /slide 1 exceeds the viewport content budget .* and is likely to be clipped; split it into another slide/,
+  );
+
   await writeFile(entry, html.replace("Reveal.initialize({", "Reveal.start({"));
   await assert.rejects(checkEntry(entry), /missing Reveal\.js runtime/);
   await writeFile(entry, html.replace("</style>", '@import "assets/missing.css";</style>'));
   await assert.rejects(checkEntry(entry), /CSS imports are not supported/);
+});
+
+test("slides capacity rejects a fourth row of fixed-height metrics", () => {
+  const render = (count: number) => {
+    const metrics = Array.from(
+      { length: count },
+      (_, index) => `<div class="metric"><span class="metric-value">${index + 1}</span></div>`,
+    ).join("");
+    return `<html data-blueprint-preset="slides" data-blueprint-theme="dify-x"><body><div class="reveal"><div class="slides"><section><div class="slide-shell"><div class="slide-header"><h2>Metrics</h2></div><div class="metric-grid cols-4">${metrics}</div></div></section></div></div><script>Reveal.initialize({plugins:[RevealNotes]})</script></body></html>`;
+  };
+
+  assert.doesNotThrow(() => checkSlidesOutput(render(12), "metrics.html"));
+  assert.throws(
+    () => checkSlidesOutput(render(16), "metrics.html"),
+    /slide 1 exceeds the viewport content budget .* and is likely to be clipped/,
+  );
 });
 
 test("managed check enforces archive shell and payload", async () => {
