@@ -64,3 +64,4 @@ Blueprint's reusable product catalog consists primarily of Presets and Preset-sc
 - Preset contracts: `skill/blueprint/references/preset-*.md`
 - Theme contracts: `skill/blueprint/references/theme-*.md`
 - Compiler and validator behavior: `src/presets/` and `src/cli.ts`
+- System boundary diagram: `docs/architecture/live/blueprint.mmd`
