@@ -42,6 +42,7 @@ export type ParsedArgs = {
   port: number;
   preset?: string;
   project?: string;
+  protect?: boolean;
   root?: string;
   target?: string;
 };
@@ -118,6 +119,7 @@ Options:
   --project <name>          Artifact name when target is omitted
   --name <name>             Worker name (default: recorded or derived)
   --account <name-or-id>    Cloudflare account
+  --protect                 Gate the site behind HTTP basic auth; prints the generated password
   -h, --help                Show this help`,
   list: `Usage:
   blueprint list [options]
@@ -149,6 +151,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
   let name: string | undefined;
   let output: string | undefined;
   let project: string | undefined;
+  let protect = false;
   let root: string | undefined;
   let scope: string | undefined;
   let scopeSet = false;
@@ -199,6 +202,11 @@ export function parseArgs(argv: string[]): ParsedArgs {
     if (value === "--account" && command === "deploy") {
       account = rest[++index];
       if (!account || account.startsWith("-")) throw new Error("--account requires a name or id");
+      continue;
+    }
+
+    if (value === "--protect" && command === "deploy") {
+      protect = true;
       continue;
     }
 
@@ -272,6 +280,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
       name,
       port,
       project,
+      protect,
       target: positionals[0],
     };
   }
@@ -783,15 +792,24 @@ export async function main(argv: string[]): Promise<number> {
       (await deriveWorkerName(project.root, project.manifest.name));
     const result = await deployWorker(target, entry, {
       account: args.account ?? project.manifest.deployment?.account,
+      credentials: args.protect ? project.manifest.deployment?.credentials : undefined,
       name,
+      protect: args.protect,
     });
     await recordDeployment(project.root, {
       account: result.account,
+      ...(result.credentials ? { credentials: result.credentials } : {}),
+      ...(typeof args.protect === "boolean" ? { protected: args.protect } : {}),
       provider: "cloudflare-workers",
       url: result.url,
       workerName: name,
     });
     process.stdout.write(`Published ${result.url}\n`);
+    if (result.credentials) {
+      process.stdout.write(
+        `Basic auth enabled; username: ${result.credentials.username}, password: ${result.credentials.password}\n`,
+      );
+    }
     return 0;
   }
 

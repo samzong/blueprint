@@ -21,7 +21,8 @@ test("deploys only publishable assets through Wrangler and verifies its URL", as
   await writeFile(
     path.join(bin, "wrangler"),
     `#!/usr/bin/env node
-import { readdirSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 const args = process.argv.slice(2);
 if (args[0] === "--version") {
   console.log("wrangler 4.105.0");
@@ -30,11 +31,22 @@ if (args[0] === "--version") {
     loggedIn: true,
     accounts: JSON.parse(process.env.BLUEPRINT_TEST_ACCOUNTS),
   }));
+} else if (args[0] === "secret") {
+  let input = "";
+  process.stdin.on("data", (chunk) => (input += chunk));
+  process.stdin.on("end", () => {
+    appendFileSync(
+      process.env.BLUEPRINT_TEST_SECRETS,
+      JSON.stringify({ name: args[2], value: input }) + "\\n",
+    );
+  });
 } else {
-  const assets = args[args.indexOf("--assets") + 1];
+  const assets = args.indexOf("--assets") >= 0 ? args[args.indexOf("--assets") + 1] : process.cwd();
+  const configPath = join(process.cwd(), "wrangler.jsonc");
   writeFileSync(process.env.BLUEPRINT_TEST_LOG, JSON.stringify({
     account: process.env.CLOUDFLARE_ACCOUNT_ID,
     args,
+    config: existsSync(configPath) ? JSON.parse(readFileSync(configPath, "utf8")) : null,
     cwd: process.cwd(),
     files: readdirSync(assets),
   }));
@@ -56,11 +68,13 @@ if (args[0] === "--version") {
   const originalAccounts = process.env.BLUEPRINT_TEST_ACCOUNTS;
   const originalCloudflareAccountId = process.env.CLOUDFLARE_ACCOUNT_ID;
   const originalLog = process.env.BLUEPRINT_TEST_LOG;
+  const originalSecrets = process.env.BLUEPRINT_TEST_SECRETS;
   const originalTargets = process.env.BLUEPRINT_TEST_TARGETS;
   const originalFetch = globalThis.fetch;
   process.env.PATH = `${bin}${path.delimiter}${originalPath}`;
   process.env.BLUEPRINT_TEST_ACCOUNTS = JSON.stringify([{ id: "account-id", name: "personal" }]);
   process.env.BLUEPRINT_TEST_LOG = log;
+  process.env.BLUEPRINT_TEST_SECRETS = path.join(directory, "secrets.log");
   delete process.env.CLOUDFLARE_ACCOUNT_ID;
   globalThis.fetch = async () => new Response("ok", { status: 200 });
 
@@ -88,6 +102,56 @@ if (args[0] === "--version") {
     );
     delete process.env.BLUEPRINT_TEST_TARGETS;
 
+    const authedRequests: (string | undefined)[] = [];
+    globalThis.fetch = async (_input: unknown, init?: RequestInit) => {
+      const authorization = new Headers(init?.headers).get("Authorization") ?? undefined;
+      authedRequests.push(authorization);
+      return new Response(authorization?.startsWith("Basic ") ? "ok" : "denied", {
+        status: authorization?.startsWith("Basic ") ? 200 : 401,
+      });
+    };
+    const protectedResult = await deployWorker(entry, await checkEntry(entry), {
+      name: "blueprint-gated",
+      protect: true,
+    });
+    assert.equal(protectedResult.credentials?.username, "viewer");
+    assert.match(protectedResult.credentials?.password ?? "", /^[0-9a-f]{32}$/);
+    const secrets = (await readFile(process.env.BLUEPRINT_TEST_SECRETS as string, "utf8"))
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line) as { name: string; value: string });
+    assert.deepEqual(secrets, [
+      { name: "BASIC_AUTH_USER", value: "viewer" },
+      { name: "BASIC_AUTH_PASS", value: protectedResult.credentials?.password },
+    ]);
+    const gatedDeployment: {
+      args: string[];
+      config: { name: string; main: string; assets: { binding: string; run_worker_first: boolean } } | null;
+      files: string[];
+    } = JSON.parse(await readFile(log, "utf8"));
+    assert.deepEqual(gatedDeployment.args, ["deploy", "--strict"]);
+    assert.equal(gatedDeployment.config?.name, "blueprint-gated");
+    assert.equal(gatedDeployment.config?.main, "worker.js");
+    assert.equal(gatedDeployment.config?.assets.binding, "ASSETS");
+    assert.equal(gatedDeployment.config?.assets.run_worker_first, true);
+    assert.ok(gatedDeployment.files.includes("worker.js"));
+    assert.deepEqual(authedRequests, [
+      undefined,
+      `Basic ${Buffer.from(`viewer:${protectedResult.credentials?.password}`).toString("base64")}`,
+    ]);
+
+    const reusedResult = await deployWorker(entry, await checkEntry(entry), {
+      name: "blueprint-gated",
+      credentials: protectedResult.credentials,
+      protect: true,
+    });
+    assert.deepEqual(reusedResult.credentials, protectedResult.credentials);
+    assert.equal(
+      (await readFile(process.env.BLUEPRINT_TEST_SECRETS as string, "utf8")).trim().split("\n").length,
+      4,
+    );
+    globalThis.fetch = async () => new Response("ok", { status: 200 });
+
     const project = path.join(directory, "managed");
     const projectEntry = path.join(directory, "managed-output", "custom.html");
     await mkdir(path.join(project, "src"), { recursive: true });
@@ -98,6 +162,21 @@ if (args[0] === "--version") {
     const managedDeployment: { args: string[]; files: string[] } = JSON.parse(await readFile(log, "utf8"));
     assert.deepEqual(managedDeployment.files, ["index.html"]);
     assert.equal(managedDeployment.args[managedDeployment.args.indexOf("--name") + 1], "managed");
+
+    globalThis.fetch = async (_input: unknown, init?: RequestInit) => {
+      const authorization = new Headers(init?.headers).get("Authorization");
+      return new Response(authorization?.startsWith("Basic ") ? "ok" : "denied", {
+        status: authorization?.startsWith("Basic ") ? 200 : 401,
+      });
+    };
+    assert.equal(await main(["deploy", project, "--protect"]), 0);
+    globalThis.fetch = async () => new Response("ok", { status: 200 });
+    const gateManifest: {
+      deployment: { credentials: { username: string; password: string }; protected: boolean };
+    } = JSON.parse(await readFile(path.join(project, ".blueprint.json"), "utf8"));
+    assert.equal(gateManifest.deployment.protected, true);
+    assert.equal(gateManifest.deployment.credentials.username, "viewer");
+    assert.match(gateManifest.deployment.credentials.password, /^[0-9a-f]{32}$/);
 
     const originalCwd = process.cwd();
     process.chdir(directory);
@@ -190,6 +269,8 @@ if (args[0] === "--version") {
     else process.env.CLOUDFLARE_ACCOUNT_ID = originalCloudflareAccountId;
     if (originalLog === undefined) delete process.env.BLUEPRINT_TEST_LOG;
     else process.env.BLUEPRINT_TEST_LOG = originalLog;
+    if (originalSecrets === undefined) delete process.env.BLUEPRINT_TEST_SECRETS;
+    else process.env.BLUEPRINT_TEST_SECRETS = originalSecrets;
     if (originalTargets === undefined) delete process.env.BLUEPRINT_TEST_TARGETS;
     else process.env.BLUEPRINT_TEST_TARGETS = originalTargets;
     globalThis.fetch = originalFetch;

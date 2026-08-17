@@ -8,6 +8,8 @@ export type ProjectPreset = "pitch" | "briefing" | "archive" | "slides" | "proto
 
 export type ProjectDeployment = {
   account: string;
+  credentials?: { username: string; password: string };
+  protected?: boolean;
   provider: "cloudflare-workers";
   url: string;
   workerName: string;
@@ -66,8 +68,22 @@ function parseDeployment(value: unknown, filename: string): ProjectDeployment | 
   }
   if (url.protocol !== "https:") throw new Error(`${filename}: deployment URL must be HTTPS`);
 
+  if ("protected" in value && typeof value.protected !== "boolean") {
+    throw new Error(`${filename}: invalid deployment`);
+  }
+  const rawCredentials = "credentials" in value ? value.credentials : undefined;
+  const credentials =
+    object(rawCredentials) && nonEmpty(rawCredentials.username) && nonEmpty(rawCredentials.password)
+      ? { username: rawCredentials.username, password: rawCredentials.password }
+      : undefined;
+  if (rawCredentials !== undefined && credentials === undefined) {
+    throw new Error(`${filename}: invalid deployment`);
+  }
+
   return {
     account: value.account,
+    ...(credentials ? { credentials } : {}),
+    ...(typeof value.protected === "boolean" ? { protected: value.protected } : {}),
     provider: value.provider,
     url: value.url,
     workerName: value.workerName,

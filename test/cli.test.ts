@@ -44,6 +44,7 @@ test("parses an explicit Worker deployment", () => {
       name: "blueprint-demo",
       port: 0,
       project: undefined,
+      protect: false,
       target: "dist",
     },
   );
@@ -53,6 +54,7 @@ test("parses an explicit Worker deployment", () => {
     name: undefined,
     port: 0,
     project: "slides",
+    protect: false,
     target: undefined,
   });
   assert.deepEqual(parseArgs(["deploy"]), {
@@ -61,8 +63,10 @@ test("parses an explicit Worker deployment", () => {
     name: undefined,
     port: 0,
     project: undefined,
+    protect: false,
     target: undefined,
   });
+  assert.equal(parseArgs(["deploy", "dist", "--protect"]).protect, true);
   assert.throws(() => parseArgs(["deploy", "dist", "--project", "slides"]), /cannot be combined with a target path/);
 });
 
