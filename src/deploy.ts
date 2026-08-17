@@ -1,5 +1,6 @@
 import { execFile, spawn } from "node:child_process";
-import { copyFile, mkdir, mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
+import { copyFile, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -63,14 +64,55 @@ async function selectAccount(accounts: Account[], requested: string | undefined)
   );
 }
 
-async function runWrangler(args: string[], env: NodeJS.ProcessEnv, cwd: string): Promise<void> {
+export type DeployCredentials = {
+  username: string;
+  password: string;
+};
+
+const gateWorkerSource = `export default {
+  async fetch(request, env) {
+    if (!isAuthorized(request.headers.get("Authorization"), env.BASIC_AUTH_USER, env.BASIC_AUTH_PASS)) {
+      return new Response("401 Unauthorized", {
+        status: 401,
+        headers: {
+          "WWW-Authenticate": 'Basic realm="blueprint", charset="UTF-8"',
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+    return env.ASSETS.fetch(request);
+  },
+};
+
+function isAuthorized(header, user, pass) {
+  if (!header || !header.startsWith("Basic ") || !user || !pass) return false;
+  let decoded;
+  try {
+    decoded = atob(header.slice(6));
+  } catch {
+    return false;
+  }
+  const expected = \`\${user}:\${pass}\`;
+  if (decoded.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < decoded.length; i++) diff |= decoded.charCodeAt(i) ^ expected.charCodeAt(i);
+  return diff === 0;
+}
+`;
+
+async function runWrangler(args: string[], env: NodeJS.ProcessEnv, cwd: string, input?: string): Promise<void> {
   await new Promise<void>((resolve, reject) => {
-    const child = spawn("wrangler", args, { cwd, env, stdio: "inherit" });
+    const child = spawn("wrangler", args, {
+      cwd,
+      env,
+      stdio: input === undefined ? "inherit" : ["pipe", "inherit", "inherit"],
+    });
     child.once("error", reject);
     child.once("exit", (code, signal) => {
       if (code === 0) resolve();
       else reject(new Error(`wrangler exited with ${signal ?? code ?? "an unknown status"}`));
     });
+    if (input !== undefined) child.stdin?.end(input);
   });
 }
 
@@ -99,7 +141,7 @@ function deploymentUrl(output: string): string {
   throw new Error("Wrangler did not report a deployment URL");
 }
 
-async function verifyDeployment(url: string): Promise<void> {
+async function verifyDeployment(url: string, credentials?: DeployCredentials): Promise<void> {
   let status: number | undefined;
   for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
@@ -109,20 +151,34 @@ async function verifyDeployment(url: string): Promise<void> {
       });
       status = response.status;
       await response.body?.cancel();
-      if (response.ok) return;
+      if (!credentials && response.ok) return;
+      if (credentials && response.status === 401) {
+        const authorized = await fetch(url, {
+          headers: {
+            Authorization: `Basic ${Buffer.from(`${credentials.username}:${credentials.password}`).toString("base64")}`,
+          },
+          redirect: "follow",
+          signal: AbortSignal.timeout(10_000),
+        });
+        status = authorized.status;
+        await authorized.body?.cancel();
+        if (authorized.ok) return;
+      }
     } catch {
       status = undefined;
     }
     if (attempt < 4) await delay(1_000);
   }
-  throw new Error(`published ${url}, but it did not return 2xx${status ? ` (last status: ${status})` : ""}`);
+  throw new Error(
+    `published ${url}, but it did not return the expected response${status ? ` (last status: ${status})` : ""}`,
+  );
 }
 
 export async function deployWorker(
   target: string,
   entry: string,
-  options: { account?: string; name: string },
-): Promise<{ account: string; url: string }> {
+  options: { account?: string; name: string; protect?: boolean; credentials?: DeployCredentials },
+): Promise<{ account: string; url: string; credentials?: DeployCredentials }> {
   let version: string;
   try {
     ({ stdout: version } = await execFileAsync("wrangler", ["--version"], { encoding: "utf8" }));
@@ -170,30 +226,69 @@ export async function deployWorker(
       await copyFile(entry, path.join(assets, "index.html"));
     }
 
-    await runWrangler(
-      [
-        "deploy",
-        "--assets",
-        assets,
-        "--name",
-        options.name,
-        "--compatibility-date",
-        new Date().toISOString().slice(0, 10),
-        "--no-autoconfig",
-        "--strict",
-      ],
-      {
-        ...process.env,
-        CLOUDFLARE_ACCOUNT_ID: account.id,
-        WRANGLER_CACHE_DIR: cache,
-        WRANGLER_OUTPUT_FILE_PATH: output,
-      },
-      temporary,
-    );
+    const wranglerEnv = {
+      ...process.env,
+      CLOUDFLARE_ACCOUNT_ID: account.id,
+      WRANGLER_CACHE_DIR: cache,
+      WRANGLER_OUTPUT_FILE_PATH: output,
+    };
+
+    let credentials: DeployCredentials | undefined;
+    if (options.protect) {
+      credentials = options.credentials ?? { username: "viewer", password: randomBytes(16).toString("hex") };
+      await writeFile(path.join(temporary, "worker.js"), gateWorkerSource);
+      await writeFile(
+        path.join(temporary, "wrangler.jsonc"),
+        `${JSON.stringify(
+          {
+            name: options.name,
+            main: "worker.js",
+            compatibility_date: new Date().toISOString().slice(0, 10),
+            workers_dev: true,
+            assets: {
+              directory: path.relative(temporary, assets),
+              binding: "ASSETS",
+              run_worker_first: true,
+            },
+          },
+          null,
+          2,
+        )}\n`,
+      );
+      await runWrangler(["deploy", "--strict"], wranglerEnv, temporary);
+      await runWrangler(
+        ["secret", "put", "BASIC_AUTH_USER", "--name", options.name],
+        wranglerEnv,
+        temporary,
+        credentials.username,
+      );
+      await runWrangler(
+        ["secret", "put", "BASIC_AUTH_PASS", "--name", options.name],
+        wranglerEnv,
+        temporary,
+        credentials.password,
+      );
+    } else {
+      await runWrangler(
+        [
+          "deploy",
+          "--assets",
+          assets,
+          "--name",
+          options.name,
+          "--compatibility-date",
+          new Date().toISOString().slice(0, 10),
+          "--no-autoconfig",
+          "--strict",
+        ],
+        wranglerEnv,
+        temporary,
+      );
+    }
 
     const url = deploymentUrl(await readFile(output, "utf8"));
-    await verifyDeployment(url);
-    return { account: account.name, url };
+    await verifyDeployment(url, credentials);
+    return { account: account.name, url, credentials };
   } finally {
     await rm(temporary, { force: true, recursive: true });
   }

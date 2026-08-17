@@ -119,6 +119,9 @@ Deploy only after the user has reviewed the preview and explicitly requested pub
 - Single-file output: `blueprint deploy <output>/index.html --name <worker-name>`
 - Select among managed projects without a path: `blueprint deploy --project <project-name>`
 - `prototype-full` or `dossier`: run `pnpm install && pnpm build`, then deploy `<output>/dist`
+- Password-protect the published Worker: append `--protect`. The CLI gates the site behind HTTP basic auth with generated `viewer` credentials, prints them, and records them together with `protected: true` in `.blueprint.json`; protected redeploys reuse the recorded credentials. Treat `.blueprint.json` as sensitive for protected projects.
+
+Redeploying without `--protect` publishes openly and removes that protection and the recorded credentials.
 
 `--name` is only the Worker name. Do not use it to pick a managed project.
 

@@ -30,10 +30,10 @@ flowchart TB
     Catalog["Product catalog<br/>Presets · Preset-scoped Themes<br/>cross-Preset design system"]:::catalog
 
     Artifact["Managed Artifact<br/>sources · entry · chrome/runtime"]:::artifact
-    ProjectMeta[".blueprint.json<br/>identity · preset · createdWith<br/>deployment record"]:::artifact
+    ProjectMeta[".blueprint.json<br/>identity · preset · createdWith<br/>deployment record · protection"]:::artifact
 
     Preview["Local preview<br/>gofs or Vite"]:::external
-    Wrangler["Cloudflare Workers<br/>Static Assets deploy"]:::external
+    Wrangler["Cloudflare Workers<br/>Static Assets deploy · optional basic-auth gate"]:::external
 
     User --> Agent
     Agent --> Skill

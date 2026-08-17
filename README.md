@@ -76,6 +76,8 @@ blueprint deploy .local/demo --name repo-task
 
 `deploy` validates a managed project, publishes it through Cloudflare Workers Static Assets, verifies the URL, and records the result in `.blueprint.json`.
 
+Pass `--protect` to gate the published Worker behind HTTP basic auth: blueprint generates `viewer` credentials, stores them as Worker secrets, records them alongside `protected: true` in `.blueprint.json`, and verifies that anonymous requests are rejected. Protected redeploys reuse the recorded credentials; omitting `--protect` publishes openly and clears the recorded protection and credentials.
+
 Single-file presets, including `slides`, may be deployed from the project directory. For `prototype-full` and `dossier`, run `pnpm build` in the project and deploy its `dist` directory.
 
 `--account` is usually unnecessary. blueprint reuses the recorded account, `CLOUDFLARE_ACCOUNT_ID`, or the only available account. The bundled skill derives Worker names as `<repo-name>-<task-name>` inside a Git repository and `<task-name>` elsewhere.
