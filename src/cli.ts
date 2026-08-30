@@ -16,6 +16,7 @@ import { parse, type DefaultTreeAdapterMap } from "parse5";
 
 import { deployWorker } from "./deploy.ts";
 import { chooseOne, type Choice } from "./interactive.ts";
+import { checkArchitectureOutput, createArchitecture, exportArchitecture } from "./presets/architecture.ts";
 import { checkArchiveOutput, createArchive } from "./presets/archive.ts";
 import { checkBriefingOutput, createBriefing } from "./presets/briefing.ts";
 import { checkPitchOutput, createPitch } from "./presets/pitch.ts";
@@ -35,6 +36,7 @@ import {
 export type ParsedArgs = {
   account?: string;
   command?: string;
+  format?: "png" | "svg";
   installFlags?: InstallFlagValues;
   json?: boolean;
   name?: string;
@@ -56,13 +58,14 @@ Commands:
   create <preset> [directory]  Create a project from a preset
   check [target]                Validate generated output
   preview [target]              Preview locally
+  export [target]               Export an architecture SVG or PNG
   deploy [target]               Publish to Cloudflare Workers
   list                          List managed projects
   skill install                 Install the bundled Agent Skill
   help [command]                Show help
 
 Presets:
-  pitch, briefing, archive, slides
+  architecture, pitch, briefing, archive, slides
   prototype-lite, prototype-full, dossier
 
 Global options:
@@ -76,7 +79,7 @@ const commandHelp: Record<string, string> = {
   blueprint create <preset> [directory] [--output <file>]
 
 Presets:
-  pitch, briefing, archive, slides
+  architecture, pitch, briefing, archive, slides
     Build one HTML file from source content
   prototype-lite
     Create a single-file React prototype
@@ -86,6 +89,18 @@ Presets:
 Options:
   --output <file>  Output path for compiled presets
   -h, --help       Show this help`,
+  export: `Usage:
+  blueprint export [target] [options]
+
+Arguments:
+  target  Artifact name, entry file, or directory;
+          omit to choose an Artifact
+
+Options:
+  --project <name>   Artifact name when target is omitted
+  --format <format>  svg or png (default: svg)
+  --output <file>    Export path (default: architecture.<format>)
+  -h, --help         Show this help`,
   check: `Usage:
   blueprint check [target]
 
@@ -146,6 +161,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
   const agents: string[] = [];
   let account: string | undefined;
   let dryRun = false;
+  let format: "png" | "svg" | undefined;
   let force = false;
   let json = false;
   let name: string | undefined;
@@ -161,9 +177,16 @@ export function parseArgs(argv: string[]): ParsedArgs {
   for (let index = 0; index < rest.length; index += 1) {
     const value = rest[index];
 
-    if (value === "--output" && command === "create") {
+    if (value === "--output" && (command === "create" || command === "export")) {
       output = rest[++index];
       if (!output) throw new Error("--output requires a path");
+      continue;
+    }
+
+    if (value === "--format" && command === "export") {
+      const rawFormat = rest[++index];
+      if (rawFormat !== "svg" && rawFormat !== "png") throw new Error("--format must be svg or png");
+      format = rawFormat;
       continue;
     }
 
@@ -187,7 +210,10 @@ export function parseArgs(argv: string[]): ParsedArgs {
       continue;
     }
 
-    if (value === "--project" && (command === "check" || command === "preview" || command === "deploy")) {
+    if (
+      value === "--project" &&
+      (command === "check" || command === "preview" || command === "export" || command === "deploy")
+    ) {
       project = rest[++index];
       if (!project || project.startsWith("-")) throw new Error("--project requires an Artifact name");
       continue;
@@ -269,6 +295,12 @@ export function parseArgs(argv: string[]): ParsedArgs {
   if (command === "list") {
     if (positionals.length > 0) throw new Error("list does not accept positional arguments");
     return { command, json, port, root, target: "." };
+  }
+
+  if (command === "export") {
+    if (positionals.length > 1) throw new Error("expected at most one target path");
+    if (project && positionals[0]) throw new Error("--project cannot be combined with a target path");
+    return { command, format: format ?? "svg", output, port, project, target: positionals[0] };
   }
 
   if (command === "deploy") {
@@ -360,6 +392,11 @@ async function checkPresetOutput(
   projectRoot: string,
 ): Promise<void> {
   switch (preset) {
+    case "architecture": {
+      const sourceFile = path.join(projectRoot, "src", "diagram.svg");
+      checkArchitectureOutput(html, entry, { filename: sourceFile, raw: await readFile(sourceFile, "utf8") });
+      return;
+    }
     case "pitch":
       checkPitchOutput(html, entry);
       return;
@@ -537,7 +574,7 @@ export function formatProjectList(
     .join("\n\n")}\n`;
 }
 
-type ManagedCommand = "check" | "deploy" | "preview";
+type ManagedCommand = "check" | "deploy" | "export" | "preview";
 
 async function targetForProject(root: string, preset: ProjectPreset, command: ManagedCommand): Promise<string> {
   if (command !== "deploy" || (preset !== "prototype-full" && preset !== "dossier")) return root;
@@ -725,6 +762,7 @@ export async function main(argv: string[]): Promise<number> {
     let entry: string;
     let preset: ProjectPreset;
     if (
+      args.preset === "architecture" ||
       args.preset === "pitch" ||
       args.preset === "archive" ||
       args.preset === "briefing" ||
@@ -735,7 +773,10 @@ export async function main(argv: string[]): Promise<number> {
     ) {
       await readCompatibleProject(target, args.preset);
     }
-    if (args.preset === "pitch") {
+    if (args.preset === "architecture") {
+      preset = args.preset;
+      entry = await createArchitecture(target, args.output);
+    } else if (args.preset === "pitch") {
       preset = args.preset;
       entry = await createPitch(target, args.output);
     } else if (args.preset === "archive") {
@@ -769,6 +810,17 @@ export async function main(argv: string[]): Promise<number> {
     const target = await resolveArtifactTarget("check", args.target, args.project);
     const entry = await checkEntry(target);
     process.stdout.write(`OK ${entry}\n`);
+    return 0;
+  }
+
+  if (args.command === "export") {
+    const target = await resolveArtifactTarget("export", args.target, args.project);
+    const entry = await checkEntry(target);
+    const project = await findProjectOrNull(target);
+    const sourceFile =
+      project?.manifest.preset === "architecture" ? path.join(project.root, "src", "diagram.svg") : undefined;
+    const output = await exportArchitecture(entry, args.format ?? "svg", args.output, sourceFile);
+    process.stdout.write(`Exported ${output}\n`);
     return 0;
   }
 

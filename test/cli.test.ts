@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { appendFile, cp, mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
+import { appendFile, cp, link, mkdir, mkdtemp, readFile, realpath, rename, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 
 import { availablePort, checkEntry, entryUrl, formatProjectList, main, parseArgs, preview } from "../src/cli.ts";
 import { archiveZhCNLabels } from "../src/presets/archive.zh-CN.ts";
+import { checkArchitectureOutput, createArchitecture, exportArchitecture } from "../src/presets/architecture.ts";
 import { createArchive } from "../src/presets/archive.ts";
 import { createBriefing } from "../src/presets/briefing.ts";
 import { createPitch } from "../src/presets/pitch.ts";
@@ -644,6 +645,125 @@ test("parses pitch creation without widening other commands", () => {
     target: "demo",
   });
   assert.throws(() => parseArgs(["check", "demo", "--output", "index.html"]), /unknown option/);
+});
+
+test("parses architecture export without widening check", () => {
+  assert.deepEqual(
+    parseArgs(["export", "demo", "--format", "png", "--output", "dist/diagram.png"]),
+    {
+      command: "export",
+      format: "png",
+      output: "dist/diagram.png",
+      port: 0,
+      project: undefined,
+      target: "demo",
+    },
+  );
+  assert.equal(parseArgs(["export", "demo"]).format, "svg");
+  assert.throws(() => parseArgs(["export", "demo", "--format", "pdf"]), /--format must be svg or png/);
+  assert.throws(() => parseArgs(["check", "demo", "--format", "svg"]), /unknown option/);
+});
+
+test("wraps direct architecture SVGs and exports the canonical source as PNG", async () => {
+  for (const fixtureName of ["architecture", "architecture-explainer"]) {
+    const fixture = fileURLToPath(new URL(`fixtures/${fixtureName}`, import.meta.url));
+    const directory = await mkdtemp(path.join(os.tmpdir(), `blueprint-${fixtureName}-`));
+    const entry = await createArchitecture(fixture, path.join(directory, "index.html"));
+    const generated = await readFile(entry, "utf8");
+    const svgFile = await exportArchitecture(entry, "svg");
+    const pngFile = await exportArchitecture(entry, "png");
+    const png = await readFile(pngFile);
+    const embeddedEntry = path.join(directory, "embedded.html");
+    await writeFile(embeddedEntry, generated.replace('data-blueprint-preset="architecture"', 'data-blueprint-preset="pitch"'));
+    const embeddedSvg = await exportArchitecture(embeddedEntry, "svg", path.join(directory, "embedded.svg"));
+
+    checkArchitectureOutput(generated, entry);
+    assert.match(await readFile(svgFile, "utf8"), /^<\?xml[^\n]+\n<svg[^>]+data-blueprint-diagram="true"/);
+    assert.match(await readFile(embeddedSvg, "utf8"), /data-blueprint-diagram="true"/);
+    assert.deepEqual([...png.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+    assert.equal(png.readUInt32BE(16), 1600);
+    assert.equal(png.readUInt32BE(20), 900);
+  }
+});
+
+test("rejects unsafe or incomplete direct architecture SVGs", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-architecture-invalid-"));
+  const sourceDirectory = path.join(directory, "src");
+  await mkdir(sourceDirectory);
+  const sourceFile = path.join(sourceDirectory, "diagram.svg");
+
+  await writeFile(sourceFile, '<svg xmlns="http://www.w3.org/2000/svg" data-blueprint-diagram="true" viewBox="0 0 100 100"><title>Unsafe</title><desc>Unsafe diagram</desc><script>alert(1)</script></svg>');
+  await assert.rejects(createArchitecture(directory), /unsafe <script>/);
+
+  await writeFile(sourceFile, '<svg xmlns="http://www.w3.org/2000/svg" data-blueprint-diagram="true" viewBox="0 0 100 100"><title>Unsafe</title><desc>Unsafe diagram</desc><image href="https:\/\/example.com\/image.png"/></svg>');
+  await assert.rejects(createArchitecture(directory), /external SVG reference/);
+
+  await writeFile(sourceFile, '<svg xmlns="http://www.w3.org/2000/svg" data-blueprint-diagram="true" viewBox="0 0 100 100"><title>Unsafe</title><desc>Unsafe diagram</desc><rect width="100" height="100" fill="url(https:\/\/example.com\/paint.svg#fill)"/></svg>');
+  await assert.rejects(createArchitecture(directory), /external reference in SVG attribute fill/);
+
+  await writeFile(sourceFile, '<svg xmlns="http://www.w3.org/2000/svg" data-blueprint-diagram="true" viewBox="0 0 100 100"><title>Unsafe</title><desc>Unsafe diagram</desc><style>rect{fill:url(\/\/example.com\/paint.svg#fill)}</style><rect width="100" height="100"/></svg>');
+  await assert.rejects(createArchitecture(directory), /external reference in SVG style/);
+
+  await writeFile(sourceFile, '<svg xmlns="http://www.w3.org/2000/svg" data-blueprint-diagram="true" viewBox="0 0 100 100"><title>Unsafe</title><desc>Unsafe diagram</desc><rect width="100" height="100" fill="url(..\/paint.svg#fill)"/></svg>');
+  await assert.rejects(createArchitecture(directory), /external reference in SVG attribute fill/);
+
+  await writeFile(sourceFile, '<svg xmlns="http://www.w3.org/2000/svg" data-blueprint-diagram="true" viewBox="0 0 100 100"><title>Unsafe</title><desc>Unsafe diagram</desc><image id="target" href="data:image/png;base64,iVBORw0KGgo="/><animate href="#target" attributeName="href" to="https:\/\/example.com\/image.png"/></svg>');
+  await assert.rejects(createArchitecture(directory), /unsafe <animate>/);
+
+  await writeFile(sourceFile, '<svg xmlns="http://www.w3.org/2000/svg" data-blueprint-diagram="true" viewBox="0 0 1600 900" width="800" height="450"><title>Ambiguous</title><desc>Conflicting dimensions</desc></svg>');
+  await assert.rejects(createArchitecture(directory), /dimensions must come from viewBox/);
+
+  await writeFile(sourceFile, '<svg xmlns="http://www.w3.org/2000/svg" data-blueprint-diagram="true" viewBox="0 0 100.5 50.5"><title>Fractional</title><desc>Fractional pixel dimensions</desc></svg>');
+  await assert.rejects(createArchitecture(directory), /must be a positive integer/);
+
+  await writeFile(sourceFile, '<svg xmlns="http://www.w3.org/2000/svg" data-blueprint-diagram="true" viewBox="0 0 100 100"><title>Invalid XML</title><desc>A & B</desc></svg>');
+  await assert.rejects(createArchitecture(directory), /SVG is not renderable/);
+
+  await writeFile(sourceFile, '<svg xmlns="http://www.w3.org/2000/svg" data-blueprint-diagram="true" viewBox="0 0 100 100"><title>Incomplete</title></svg>');
+  await assert.rejects(createArchitecture(directory), /non-empty <desc>/);
+});
+
+test("requires a live architecture SVG instead of commented source", () => {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" data-blueprint-diagram="true" viewBox="0 0 100 100"><title>Comment</title><desc>Comment only</desc></svg>';
+  const html = `<!doctype html><html data-blueprint-preset="architecture"><head></head><body><!--${svg}--></body></html>`;
+  assert.throws(() => checkArchitectureOutput(html, "comment.html"), /expected exactly one Blueprint diagram SVG/);
+});
+
+test("does not overwrite the architecture entry or follow output symlinks", async () => {
+  const fixture = fileURLToPath(new URL("fixtures/architecture", import.meta.url));
+  const directory = await mkdtemp(path.join(os.tmpdir(), "blueprint-architecture-output-"));
+  const project = path.join(directory, "project");
+  await cp(fixture, project, { recursive: true });
+  const sourceFile = path.join(project, "src", "diagram.svg");
+  const source = await readFile(sourceFile, "utf8");
+  await assert.rejects(createArchitecture(project, sourceFile), /must not overwrite the architecture source/);
+  assert.match(await readFile(sourceFile, "utf8"), /^<svg/);
+
+  const projectEntry = await createArchitecture(project);
+  await recordProject(project, "architecture", projectEntry, "0.1.0");
+  await assert.rejects(
+    main(["export", project, "--format", "png", "--output", sourceFile]),
+    /must not overwrite the architecture source/,
+  );
+  assert.match(await readFile(sourceFile, "utf8"), /^<svg/);
+
+  await writeFile(sourceFile, source.replace("Native agent launcher architecture", "Changed architecture"));
+  await assert.rejects(main(["check", project]), /entry is stale/);
+  await assert.rejects(
+    main(["export", project, "--output", path.join(directory, "stale.svg")]),
+    /entry is stale/,
+  );
+
+  const entry = await createArchitecture(fixture, path.join(directory, "index.html"));
+  const hardLink = path.join(directory, "entry-alias.html");
+  await link(entry, hardLink);
+  await assert.rejects(exportArchitecture(entry, "svg", hardLink), /must not overwrite the HTML entry/);
+
+  const outside = path.join(directory, "outside.txt");
+  await writeFile(outside, "sensitive");
+  await symlink(outside, path.join(directory, "architecture.svg"));
+  await assert.rejects(exportArchitecture(entry, "svg"), /symbolic link/);
+  assert.equal(await readFile(outside, "utf8"), "sensitive");
 });
 
 

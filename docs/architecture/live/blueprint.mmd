@@ -13,13 +13,13 @@ flowchart TB
     User["User"]:::actor
     Agent["Host coding agent"]:::actor
 
-    Skill["Bundled Agent Skill<br/>preset selection · research · writing<br/>upgrade merge · visual judgment"]:::skill
-    Refs["Skill references<br/>preset-*.md · theme-*.md<br/>design-system.md"]:::skill
+    Skill["Bundled Agent Skill<br/>preset selection · research · direct composition<br/>upgrade merge · visual judgment"]:::skill
+    Refs["Skill references<br/>preset-*.md · architecture-diagrams.md<br/>theme-*.md · design-system.md"]:::skill
 
     subgraph CLI["blueprint CLI"]
         direction TB
-        Commands["Commands<br/>create · check · preview<br/>deploy · list · skill install"]:::cli
-        Compiler["Presets + compiler / scaffold<br/>src/presets · shared chrome"]:::cli
+        Commands["Commands<br/>create · check · preview · export<br/>deploy · list · skill install"]:::cli
+        Compiler["Presets + compiler / scaffold<br/>src/presets · shared chrome · SVG wrapper"]:::cli
         Validator["Validator<br/>check + preset contracts"]:::cli
         Manifest["Project manifest owner<br/>.blueprint.json schema"]:::cli
         Commands --> Compiler
@@ -29,8 +29,10 @@ flowchart TB
 
     Catalog["Product catalog<br/>Presets · Preset-scoped Themes<br/>cross-Preset design system"]:::catalog
 
-    Artifact["Managed Artifact<br/>sources · entry · chrome/runtime"]:::artifact
+    Sources["Agent-authored sources<br/>diagram.svg · semantic content"]:::artifact
+    Artifact["Managed Artifact<br/>entry · inline SVG · chrome/runtime"]:::artifact
     ProjectMeta[".blueprint.json<br/>identity · preset · createdWith<br/>deployment record · protection"]:::artifact
+    Portable["Portable architecture exports<br/>SVG · PNG"]:::artifact
 
     Preview["Local preview<br/>gofs or Vite"]:::external
     Wrangler["Cloudflare Workers<br/>Static Assets deploy · optional basic-auth gate"]:::external
@@ -39,12 +41,14 @@ flowchart TB
     Agent --> Skill
     Skill --> Refs
     Skill -->|"invokes"| Commands
+    Skill -->|"writes"| Sources
     Refs -.->|"contracts"| Catalog
     Compiler --> Catalog
     Validator --> Catalog
-    Compiler --> Artifact
+    Sources -->|"input"| Compiler
+    Compiler -->|"wraps / compiles"| Artifact
+    Artifact -->|"export"| Portable
     Validator --> Artifact
     Manifest --> ProjectMeta
-    Artifact --- ProjectMeta
     Commands -->|"preview"| Preview
     Commands <-->|"deploy / verified URL"| Wrangler

@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" data-blueprint-diagram="true" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Native agent launcher architecture</title>
+  <desc id="desc">A technical poster showing entrypoints, launch stages, native processes, provider APIs, and runtime evidence.</desc>
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#111827" flood-opacity="0.1"/></filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#173fff"/></marker>
+  </defs>
+  <rect width="1600" height="900" fill="#fbfbfa"/>
+  <path d="M56 42H1544" stroke="#17191d" stroke-width="4"/>
+  <text x="56" y="88" fill="#173fff" font-family="Arial, sans-serif" font-size="16" font-weight="700" letter-spacing="3">RUNTIME ARCHITECTURE</text>
+  <text x="56" y="140" fill="#17191d" font-family="Arial, sans-serif" font-size="42" font-weight="800">One config for native agent harnesses.</text>
+  <g font-family="Arial, sans-serif">
+    <rect x="56" y="190" width="1488" height="546" rx="18" fill="#fff" stroke="#d9dce1" stroke-width="2" filter="url(#shadow)"/>
+    <path d="M286 190V736M930 190V736M1225 190V736" stroke="#d9dce1" stroke-width="2"/>
+    <text x="78" y="226" fill="#173fff" font-size="15" font-weight="700" letter-spacing="2">ENTRYPOINTS</text>
+    <text x="312" y="226" fill="#9b5a13" font-size="15" font-weight="700" letter-spacing="2">LAUNCH PIPELINE</text>
+    <text x="956" y="226" fill="#e4562b" font-size="15" font-weight="700" letter-spacing="2">NATIVE PROCESS</text>
+    <text x="1251" y="226" fill="#489b55" font-size="15" font-weight="700" letter-spacing="2">PROVIDER API</text>
+    <g font-family="ui-monospace, monospace" font-size="20" fill="#173fff">
+      <text x="78" y="292">rx</text><text x="78" y="366">rxc</text><text x="78" y="440">rxx</text><text x="78" y="514">rxo</text><text x="78" y="588">rxp</text>
+    </g>
+    <g fill="#454b55" font-size="18">
+      <text x="150" y="292">interactive picker</text><text x="150" y="366">Claude Code</text><text x="150" y="440">Codex</text><text x="150" y="514">OpenCode</text><text x="150" y="588">Pi</text>
+    </g>
+    <path d="M286 450H332" stroke="#173fff" stroke-width="3" marker-end="url(#arrow)"/>
+    <g filter="url(#shadow)">
+      <rect x="342" y="312" width="128" height="180" rx="12" fill="#fff" stroke="#173fff" stroke-width="3"/>
+      <rect x="490" y="312" width="128" height="180" rx="12" fill="#fff" stroke="#9b5a13" stroke-width="3"/>
+      <rect x="638" y="312" width="128" height="180" rx="12" fill="#fff" stroke="#e4562b" stroke-width="3"/>
+      <rect x="786" y="312" width="128" height="180" rx="12" fill="#fff" stroke="#489b55" stroke-width="3"/>
+    </g>
+    <g font-size="26" font-weight="750">
+      <text x="362" y="405" fill="#173fff">Parse</text><text x="510" y="405" fill="#9b5a13">Pick</text><text x="658" y="405" fill="#e4562b">Resolve</text><text x="806" y="405" fill="#489b55">Plan</text>
+    </g>
+    <path d="M470 402H490M618 402H638M766 402H786M914 402H946" stroke="#173fff" stroke-width="3"/>
+    <g fill="#17191d" font-size="20" font-weight="700">
+      <text x="982" y="300">Claude Code</text><text x="982" y="382">Codex</text><text x="982" y="464">OpenCode</text><text x="982" y="546">Pi</text><text x="982" y="628">DeepSeek Harness</text>
+    </g>
+    <g font-family="ui-monospace, monospace" font-size="17" fill="#5d626b">
+      <text x="1270" y="314">GET</text><text x="1335" y="314">/v1/models</text><text x="1270" y="406">POST</text><text x="1335" y="406">/v1/chat/completions</text><text x="1270" y="498">POST</text><text x="1335" y="498">/v1/responses</text><text x="1270" y="590">POST</text><text x="1335" y="590">/v1/messages</text>
+    </g>
+  </g>
+  <g font-family="ui-monospace, monospace">
+    <rect x="56" y="762" width="1488" height="98" rx="16" fill="#111315"/>
+    <text x="86" y="801" fill="#818690" font-size="14" font-weight="700" letter-spacing="2">LOCAL RUNTIME</text>
+    <text x="86" y="832" fill="#f2f3f5" font-size="17">config → credentials → process env → native binary</text>
+    <text x="1040" y="801" fill="#818690" font-size="14" font-weight="700" letter-spacing="2">BOUNDARY</text>
+    <text x="1040" y="832" fill="#f2f3f5" font-size="17">no proxy · no session database</text>
+  </g>
+</svg>

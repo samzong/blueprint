@@ -1,6 +1,6 @@
 # blueprint
 
-blueprint turns a conversational web brief into deterministic, portable output.
+blueprint turns a conversational brief into a deterministic, portable Artifact.
 
 - The CLI owns presets, validation, preview, deployment, and project metadata.
 - The bundled Agent Skill owns preset selection, research, writing, upgrades, and visual review.
@@ -50,6 +50,7 @@ Available presets:
 
 | Preset           | Output                                                                                            | Theme model                                                           |
 | ---------------- | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `architecture`   | Agent-designed SVG in a reviewable HTML shell with deterministic SVG/PNG export                    | Project-specific composition derived from Recall and rx visual DNA     |
 | `pitch`          | Compiled single-file story                                                                        | No named Theme; shared design system and fixed Preset baseline        |
 | `briefing`       | Compiled single-file slide deck                                                                   | Fixed `briefing` Theme                                                |
 | `slides`         | Compiled single-file Reveal.js presentation with optional brand/language chrome and speaker notes | Configured `dify-x` Theme; currently the only supported value         |
@@ -59,7 +60,19 @@ Available presets:
 | `dossier`        | Maintained Vite + React + TypeScript report                                                       | No named Theme; Artifact-specific styling and entity color strategy   |
 
 
-A Preset is the Artifact contract, not a visual style. Only `slides` currently exposes a Theme field; `briefing` and `archive` use fixed Themes. See [CONTEXT.md](CONTEXT.md) for canonical terminology and ownership.
+A Preset is the Artifact contract, not a visual style. Architecture diagrams are composed for the actual system instead of selected from a Theme switch. `slides` exposes `dify-x`; `briefing` and `archive` use fixed Themes. See [CONTEXT.md](CONTEXT.md) for canonical terminology and ownership.
+
+For architecture work, ask the Agent to draw the diagram. It inspects the project and directly authors the complete `src/diagram.svg`; Blueprint validates it, wraps it in an HTML review surface, and exports that same drawing as SVG or PNG. You do not provide nodes, coordinates, or layout JSON.
+
+```bash
+blueprint create architecture .local/system-map
+blueprint check .local/system-map
+blueprint preview .local/system-map
+blueprint export .local/system-map --format svg
+blueprint export .local/system-map --format png
+```
+
+The Agent chooses and adapts the composition from the system facts: Recall-style system maps for ownership and flow, rx-style runtime posters for dense execution paths, or a project-specific blend when the content requires it. Exported SVG can be embedded in another Blueprint Artifact while `src/diagram.svg` remains the editable source.
 
 Every successful `create` writes `.blueprint.json` with the project identity, entry point, preset, last verified preset version, and latest verified deployment. Rebuilding preserves the project ID, version marker, and deployment record; the bundled skill advances `createdWith` only after a verified upgrade.
 
@@ -108,6 +121,7 @@ blueprint directly uses:
 
 - [gofs](https://github.com/samzong/gofs) for single-file local preview serving
 - [@kitup/sdk](https://github.com/lathe-cli/kitup) for bundled Agent Skill installation
+- [resvg-js](https://github.com/thx/resvg-js) for deterministic SVG-to-PNG rendering
 - [Wrangler](https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler) and [Cloudflare Workers](https://developers.cloudflare.com/workers/) for deployment
 
 

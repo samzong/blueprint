@@ -1,12 +1,12 @@
 ---
 name: blueprint
 description: >
-  Create, upgrade, rebuild, validate, preview, discover, and deploy blueprint-managed
-  web projects using pitch, briefing, slides, archive, prototype, or dossier presets.
+  Create, upgrade, rebuild, validate, preview, discover, export, and deploy blueprint-managed
+  Artifacts using architecture, pitch, briefing, slides, archive, prototype, or dossier presets.
   Use when the user mentions blueprint, asks to create a page, demo, deck,
-  report, or Markdown archive, or wants to upgrade, check, preview, list, or
-  publish an existing blueprint project. Do not use for unrelated web projects
-  or non-web outputs.
+  report, architecture diagram, or Markdown archive, or wants to upgrade, check, preview, export, list, or
+  publish an existing blueprint project. Do not use for unrelated websites or
+  non-architecture image outputs.
 ---
 
 **Reply language**: use Chinese with the user. Use English for code, comments, filenames, and Git text.
@@ -37,6 +37,7 @@ Ask at most one blocking question and only for missing information that changes 
 
 | Intent | Preset |
 |---|---|
+| Architecture diagram, system boundary, runtime topology, data flow, concept explainer | `architecture` |
 | Investor pitch, product introduction, landing page | `pitch` |
 | Stage presentation, conference talk, speaker deck, PPT | `slides` |
 | Clickable concept, interaction demo, state switching | `prototype` |
@@ -45,6 +46,8 @@ Ask at most one blocking question and only for missing information that changes 
 | Markdown library, knowledge base, searchable document set | `archive` |
 
 Ask for the primary audience or delivery form only when multiple rows or none match.
+
+For an architecture diagram, use the `architecture` Preset even when the user asks only to “draw a diagram.” Do not ask for nodes, coordinates, colors, or a style selector. Inspect the project, choose the message and composition, and directly author the complete SVG. When a diagram belongs inside another Blueprint Artifact, build and review it as an `architecture` Artifact first, export SVG, then embed the approved SVG in the destination Preset.
 
 An explicit request for slides, PPT, Reveal.js, speaker notes, or stage delivery selects `slides` even when the subject could also fit `pitch` or `briefing`. Choose `prototype-lite` for one page with at most three core interaction states. Choose `prototype-full` for multiple views or sustained iteration. Default to `prototype-lite`. Use the `dify-x` Theme for `slides`; do not ask the user to choose a Theme while it is the only supported slides Theme. `briefing` and `archive` use fixed Themes, so do not ask for a Theme choice.
 
@@ -67,6 +70,7 @@ When rebuilding a legacy page or time-sensitive product story:
 
 | Preset | References |
 |---|---|
+| `architecture` | [diagram direction](references/architecture-diagrams.md), [architecture contract](references/preset-architecture.md) |
 | `pitch` | [design system](references/design-system.md), [pitch contract](references/preset-pitch.md) |
 | `briefing` | [design system](references/design-system.md), [briefing theme](references/theme-briefing.md), [briefing contract](references/preset-briefing.md) |
 | `slides` | [design system](references/design-system.md), [Dify-X theme](references/theme-dify-x.md), [slides contract](references/preset-slides.md) |
@@ -77,8 +81,8 @@ When rebuilding a legacy page or time-sensitive product story:
 ### Generate
 
 1. Run `blueprint --version`. Stop and request installation when unavailable; do not copy an old template as fallback.
-2. Write content according to the selected references.
-3. For `pitch`, `briefing`, `slides`, or `archive`, write only semantic sources under `src/`, then run:
+2. Write content according to the selected references. For `architecture`, trace the live system and directly draw the full `src/diagram.svg`; the CLI must not decide its layout or visual language.
+3. For `architecture`, `pitch`, `briefing`, `slides`, or `archive`, write only sources under `src/`, then run:
 
    ```bash
    blueprint create <preset> <output>
@@ -86,7 +90,7 @@ When rebuilding a legacy page or time-sensitive product story:
    ```
 
 4. For `prototype-lite`, `prototype-full`, or `dossier`, run `blueprint create <preset> <output>` before filling topic-specific content.
-5. Return the output path and the appropriate preview command. Do not install dependencies or start a server unless the user requested preview or deployment.
+5. For `architecture`, render and inspect the PNG before returning the review path. For other Presets, return the output path and the appropriate preview command. Do not install dependencies or start a server unless the user requested preview or deployment.
 
 Let `blueprint create` own the `.blueprint.json` schema and initial manifest. Never create, copy, delete, add, remove, or rename manifest fields. During a verified upgrade, the Agent may update only the existing `createdWith` value.
 
@@ -109,6 +113,8 @@ Treat an upgrade as a preservation-first semantic merge, not regeneration.
 - Discover under another root: `blueprint list --root <path>`
 - Request machine-readable discovery output: append `--json`
 - Preview: `blueprint preview <target>`; for `prototype-full` or `dossier`, run `pnpm install` first when dependencies are absent.
+- Export an architecture SVG: `blueprint export <target> --format svg`
+- Export an architecture PNG: `blueprint export <target> --format png`
 
 Use paths returned by discovery; do not store absolute paths in `.blueprint.json`. Treat `deployed` as a record of a previously verified publish, not proof that the remote still exists.
 
@@ -139,6 +145,6 @@ Omit `--account` by default. Let the CLI resolve the recorded account, `CLOUDFLA
 - Do not run `git init`, install dependencies, or start a server unless required by the requested operation.
 - Do not add unrequested documentation, linters, formatters, hooks, state libraries, or UI frameworks.
 - Do not write narration comments.
-- Preview only the compiled root `index.html` for `pitch`, `briefing`, `slides`, and `archive`.
-- Do not recreate compiler-owned navigation, progress, responsive behavior, deck chrome, language controls, CSS, or runtime in semantic sources.
+- Preview only the compiled root `index.html` for `architecture`, `pitch`, `briefing`, `slides`, and `archive`.
+- Do not recreate compiler-owned navigation, progress, responsive behavior, deck chrome, language controls, or runtime in semantic sources. Architecture SVG sources own their drawing styles.
 - Do not add CTA, contact, or approval slides to `briefing` unless explicitly requested.
