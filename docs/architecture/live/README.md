@@ -2,7 +2,7 @@
 
 `blueprint.mmd` is the **single source of truth** for this repository's system
 boundary: Skill ownership, CLI surface, Preset/Theme catalog, Artifact
-manifest, preview, and deploy.
+manifest, preview, export, and deploy.
 
 There is no separate publish step. Updating the file on the default branch is
 the publish.
@@ -16,11 +16,11 @@ is **incomplete**.
 Update the diagram when any of these change:
 
 - supported Preset or Theme contract boundaries
-- CLI command surface (`create`, `check`, `preview`, `deploy`, `list`, `skill`)
+- CLI command surface (`create`, `check`, `preview`, `export`, `deploy`, `list`, `skill`)
 - Skill ↔ CLI ownership (what the Skill decides vs what the CLI owns)
 - compiler, scaffold, validator, or chrome/runtime ownership
 - `.blueprint.json` schema or deployment record shape
-- preview or deploy path
+- preview, export, or deploy path
 
 Do **not** update the diagram for:
 

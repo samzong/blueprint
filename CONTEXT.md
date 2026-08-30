@@ -2,7 +2,7 @@
 
 ## Product model
 
-Blueprint turns a conversational web brief into a managed Artifact through a Preset. A Preset defines the Artifact contract. A Theme defines reusable visual language within that contract.
+Blueprint turns a conversational brief into a managed Artifact through a Preset. A Preset defines the Artifact contract. A Theme defines reusable visual language within that contract.
 
 ## Canonical terminology
 

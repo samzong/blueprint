@@ -4,7 +4,15 @@ import path from "node:path";
 
 export const projectFilename = ".blueprint.json";
 
-export type ProjectPreset = "pitch" | "briefing" | "archive" | "slides" | "prototype-lite" | "prototype-full" | "dossier";
+export type ProjectPreset =
+  | "architecture"
+  | "archive"
+  | "briefing"
+  | "dossier"
+  | "pitch"
+  | "prototype-full"
+  | "prototype-lite"
+  | "slides";
 
 export type ProjectDeployment = {
   account: string;
@@ -37,7 +45,16 @@ export type ProjectSummary = {
   url: string | null;
 };
 
-const presets = new Set<ProjectPreset>(["pitch", "briefing", "archive", "slides", "prototype-lite", "prototype-full", "dossier"]);
+const presets = new Set<ProjectPreset>([
+  "architecture",
+  "archive",
+  "briefing",
+  "dossier",
+  "pitch",
+  "prototype-full",
+  "prototype-lite",
+  "slides",
+]);
 const ignoredDirectories = new Set([".git", ".cache", ".Trash", "Library", "node_modules"]);
 
 function object(value: unknown): value is Record<string, unknown> {

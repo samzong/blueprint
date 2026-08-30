@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" data-blueprint-diagram="true" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Local session recall system map</title>
+  <desc id="desc">A spacious system map showing local sessions flowing through adapters, indexing, search, and user-facing interfaces.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#343940"/></marker>
+    <pattern id="paper" width="32" height="32" patternUnits="userSpaceOnUse"><circle cx="3" cy="3" r="1" fill="#9c8e6f" opacity="0.12"/></pattern>
+  </defs>
+  <rect width="1600" height="900" fill="#fff9e9"/>
+  <rect width="1600" height="900" fill="url(#paper)"/>
+  <g font-family="Comic Sans MS, Chalkboard SE, Segoe Print, cursive">
+    <text x="800" y="68" text-anchor="middle" fill="#18191c" font-size="42" font-weight="700">One local index for every AI coding session</text>
+    <rect x="70" y="112" width="1060" height="118" rx="24" fill="#e9f4fb" stroke="#287bb5" stroke-width="3"/>
+    <text x="102" y="153" fill="#18191c" font-size="23" font-weight="700">Local AI-coding session data</text>
+    <text x="102" y="188" fill="#404650" font-size="18">Claude Code · OpenCode · Codex · Cursor · Gemini · Kiro · Cline · more</text>
+    <rect x="1170" y="112" width="360" height="118" rx="24" fill="#edf7ef" stroke="#319760" stroke-width="3"/>
+    <text x="1202" y="153" fill="#18191c" font-size="23" font-weight="700">rx launcher</text>
+    <text x="1202" y="187" fill="#404650" font-size="18">native harness gateway · independent</text>
+    <rect x="70" y="276" width="1060" height="480" rx="30" fill="#fffdf6" stroke="#287bb5" stroke-width="3"/>
+    <text x="102" y="319" fill="#343940" font-size="18" font-weight="700">RECALL CORE</text>
+    <rect x="136" y="356" width="310" height="96" rx="18" fill="#edf7ef" stroke="#319760" stroke-width="3"/>
+    <text x="168" y="395" fill="#18191c" font-size="25" font-weight="700">Source adapters</text>
+    <text x="168" y="426" fill="#59616c" font-family="ui-monospace, monospace" font-size="16">scan → RawSession</text>
+    <rect x="516" y="356" width="220" height="96" rx="18" fill="#edf7ef" stroke="#319760" stroke-width="3"/>
+    <text x="548" y="395" fill="#18191c" font-size="25" font-weight="700">Sync</text>
+    <text x="548" y="426" fill="#59616c" font-family="ui-monospace, monospace" font-size="16">incremental writes</text>
+    <path d="M446 404H516" fill="none" stroke="#343940" stroke-width="3" marker-end="url(#arrow)"/>
+    <rect x="806" y="344" width="258" height="120" rx="18" fill="#f6edf8" stroke="#8d58c7" stroke-width="3"/>
+    <text x="838" y="389" fill="#18191c" font-size="25" font-weight="700">recall.db</text>
+    <text x="838" y="420" fill="#404650" font-size="17">sessions · events · usage</text>
+    <text x="838" y="445" fill="#59616c" font-family="ui-monospace, monospace" font-size="15">SQLite · internal schema</text>
+    <path d="M736 404H806" fill="none" stroke="#343940" stroke-width="3" marker-end="url(#arrow)"/>
+    <rect x="260" y="522" width="686" height="84" rx="18" fill="#fff2dd" stroke="#d98619" stroke-width="3"/>
+    <text x="292" y="558" fill="#18191c" font-size="24" font-weight="700">Search &amp; read plane</text>
+    <text x="292" y="586" fill="#59616c" font-family="ui-monospace, monospace" font-size="16">FTS5 + sqlite-vec · one query owner</text>
+    <path d="M935 464V522" fill="none" stroke="#343940" stroke-width="3" marker-end="url(#arrow)"/>
+    <g fill="#e9f4fb" stroke="#287bb5" stroke-width="3">
+      <rect x="136" y="660" width="230" height="68" rx="16"/><rect x="410" y="660" width="230" height="68" rx="16"/><rect x="684" y="660" width="230" height="68" rx="16"/>
+    </g>
+    <g fill="#18191c" font-size="24" font-weight="700" text-anchor="middle">
+      <text x="251" y="703">MCP</text><text x="525" y="703">TUI</text><text x="799" y="703">CLI</text>
+    </g>
+    <path d="M398 606 251 660M603 606 525 660M808 606 799 660" fill="none" stroke="#343940" stroke-width="3" marker-end="url(#arrow)"/>
+    <rect x="1170" y="276" width="360" height="280" rx="24" fill="#fff2dd" stroke="#d98619" stroke-width="3" stroke-dasharray="10 8"/>
+    <text x="1202" y="319" fill="#18191c" font-size="23" font-weight="700">Official extensions</text>
+    <text x="1202" y="363" fill="#404650" font-family="ui-monospace, monospace" font-size="17">recall-powercontext</text>
+    <text x="1202" y="395" fill="#404650" font-family="ui-monospace, monospace" font-size="17">recall-probe</text>
+    <text x="1202" y="427" fill="#404650" font-family="ui-monospace, monospace" font-size="17">recall-reflect</text>
+    <text x="1202" y="487" fill="#404650" font-size="17">CLI JSON / JSONL only</text>
+    <text x="1202" y="518" fill="#404650" font-size="17">never read SQLite internals</text>
+    <path d="M914 694H1148V476H1170" fill="none" stroke="#287bb5" stroke-width="3" stroke-dasharray="9 7" marker-end="url(#arrow)"/>
+    <rect x="70" y="802" width="1460" height="56" rx="18" fill="#dff2df" stroke="#319760" stroke-width="3" stroke-dasharray="10 8"/>
+    <text x="800" y="838" text-anchor="middle" fill="#235f3e" font-size="21" font-weight="700">Local data stays local. Public boundaries stay explicit.</text>
+  </g>
+</svg>
