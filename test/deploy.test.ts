@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { chmod, cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { chmod, cp, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -243,6 +243,8 @@ if (args[0] === "--version") {
     const htmlManifest = await readFile(path.join(html, ".blueprint.json"), "utf8");
     assert.equal(await main(["create", "html", html]), 0);
     assert.equal(await readFile(path.join(html, ".blueprint.json"), "utf8"), htmlManifest);
+    await symlink(".blueprint.json", path.join(html, "public.json"));
+    await assert.rejects(main(["deploy", html, "--name", "blueprint-html"]), /symbolic links are not publishable/);
 
     process.env.BLUEPRINT_TEST_ACCOUNTS = JSON.stringify([
       { id: "personal-id", name: "personal" },

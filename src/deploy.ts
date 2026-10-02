@@ -1,6 +1,6 @@
 import { execFile, spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { copyFile, cp, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { copyFile, cp, lstat, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -225,7 +225,11 @@ export async function deployWorker(
       assets = path.join(temporary, "site");
       await cp(project.root, assets, {
         recursive: true,
-        filter: (source) => !path.relative(project.root, source).split(path.sep).some((part) => part.startsWith(".")),
+        filter: async (source) => {
+          if (path.relative(project.root, source).split(path.sep).some((part) => part.startsWith("."))) return false;
+          if ((await lstat(source)).isSymbolicLink()) throw new Error(`${source}: symbolic links are not publishable site assets`);
+          return true;
+        },
       });
     } else if (singleFile) {
       assets = path.join(temporary, "site");

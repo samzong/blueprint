@@ -63,7 +63,7 @@ Available presets:
 
 A Preset is the Artifact contract, not a visual style. Architecture diagrams are composed for the actual system instead of selected from a Theme switch. `slides` exposes `dify-x`; `briefing` and `archive` use fixed Themes. See [CONTEXT.md](CONTEXT.md) for canonical terminology and ownership.
 
-For free-form HTML, run `blueprint create html .local/report`, author the page and its local assets, then use the existing `check`, `preview`, and `deploy` commands. No Theme, font, chrome, or framework is injected. Repeating create preserves content and identity. The Artifact directory is the site's document root; deployment preserves relative paths and excludes dotfiles and hidden directories. Keep private working notes under `.local/` or outside the Artifact.
+For free-form HTML, run `blueprint create html .local/report`, author the page and its local assets, then use the existing `check`, `preview`, and `deploy` commands. No Theme, font, chrome, or framework is injected. Repeating create preserves content and identity. The Artifact directory is the site's document root; deployment preserves relative paths, excludes dotfiles and hidden directories, and rejects symbolic links. Keep private working notes under `.local/` or outside the Artifact.
 
 For architecture work, ask the Agent to draw the diagram. It inspects the project and directly authors the complete `src/diagram.svg`; Blueprint validates it, wraps it in an HTML review surface, and exports that same drawing as SVG or PNG. You do not provide nodes, coordinates, or layout JSON.
 
