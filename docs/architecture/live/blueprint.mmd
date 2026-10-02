@@ -44,8 +44,8 @@ flowchart TB
     Skill -->|"invokes"| Commands
     Skill -->|"writes"| Sources
     Skill -->|"direct authoring · no Theme references"| Html
-    Commands -->|"minimal create · preserve on repeat"| Html
-    Validator -->|"HTML delivery contract"| Html
+    Compiler -->|"minimal scaffold · preserve on repeat"| Html
+    Validator -->|"document basics"| Html
     Html --> Preview
     Html --> Wrangler
     Refs -.->|"contracts"| Catalog
