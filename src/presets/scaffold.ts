@@ -1,7 +1,7 @@
 import { cp, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-export type ScaffoldPreset = "dossier" | "prototype-full" | "prototype-lite";
+export type ScaffoldPreset = "dossier" | "html" | "prototype-full" | "prototype-lite";
 
 const unresolvedToken = /__[A-Z0-9_]+__/;
 
@@ -47,7 +47,7 @@ export async function createScaffold(preset: ScaffoldPreset, project: string): P
     __PRESET__: preset === "dossier" ? "Dossier" : "Prototype",
   };
   const tokenFiles =
-    template === "prototype-lite"
+    template === "prototype-lite" || template === "html"
       ? ["index.html"]
       : [
           "package.json",

@@ -73,7 +73,7 @@ When rebuilding a legacy page or time-sensitive product story:
 
 | Preset | References |
 |---|---|
-| `html` | [HTML contract](references/preset-html.md) only |
+| `html` | None |
 | `architecture` | [diagram direction](references/architecture-diagrams.md), [architecture contract](references/preset-architecture.md) |
 | `pitch` | [design system](references/design-system.md), [pitch contract](references/preset-pitch.md) |
 | `briefing` | [design system](references/design-system.md), [briefing theme](references/theme-briefing.md), [briefing contract](references/preset-briefing.md) |
@@ -93,7 +93,7 @@ When rebuilding a legacy page or time-sensitive product story:
    blueprint check <output>/index.html
    ```
 
-4. For `html`, run `blueprint create html <output>` first, then directly author `<output>/index.html` and run `blueprint check <output>`. Keep the stable directory and CLI-owned manifest. Author local images, CSS, JavaScript, and data in any layout under the Artifact directory. No framework bootstrap is required. Keep private working notes under `.local/` or outside the Artifact; dotfiles, hidden directories, and `node_modules` are not published. Repeating create checks and preserves existing HTML.
+4. For `html`, run `blueprint create html <output>` first, then directly author `<output>/index.html` and run `blueprint check <output>`. Keep the stable directory and CLI-owned manifest. Author local images, CSS, JavaScript, and data in any layout under the Artifact directory. No framework bootstrap is required. Keep private working notes under `.local/` or outside the Artifact; dotfiles and hidden directories are not published, and symbolic links are rejected. Repeating create checks and preserves existing HTML.
 5. For `prototype-lite`, `prototype-full`, or `dossier`, run `blueprint create <preset> <output>` before filling topic-specific content.
 6. For `architecture`, render and inspect the PNG before returning the review path. For other Presets, return the output path and the appropriate preview command. Do not install dependencies or start a server unless the user requested preview or deployment.
 

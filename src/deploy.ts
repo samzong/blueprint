@@ -226,8 +226,7 @@ export async function deployWorker(
       await cp(project.root, assets, {
         recursive: true,
         filter: async (source) => {
-          const parts = path.relative(project.root, source).split(path.sep);
-          if (parts.some((part) => part.startsWith(".") || part === "node_modules")) return false;
+          if (path.relative(project.root, source).split(path.sep).some((part) => part.startsWith("."))) return false;
           if ((await lstat(source)).isSymbolicLink()) throw new Error(`${source}: symbolic links are not publishable site assets`);
           return true;
         },

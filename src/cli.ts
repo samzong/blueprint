@@ -19,7 +19,6 @@ import { chooseOne, type Choice } from "./interactive.ts";
 import { checkArchitectureOutput, createArchitecture, exportArchitecture } from "./presets/architecture.ts";
 import { checkArchiveOutput, createArchive } from "./presets/archive.ts";
 import { checkBriefingOutput, createBriefing } from "./presets/briefing.ts";
-import { checkHtmlOutput, createHtml } from "./presets/html.ts";
 import { checkPitchOutput, createPitch } from "./presets/pitch.ts";
 import { checkScaffoldOutput, createScaffold } from "./presets/scaffold.ts";
 import { checkSlidesOutput, createSlides } from "./presets/slides.ts";
@@ -395,9 +394,6 @@ async function checkPresetOutput(
   projectRoot: string,
 ): Promise<void> {
   switch (preset) {
-    case "html":
-      await checkHtmlOutput(entry, projectRoot);
-      return;
     case "architecture": {
       const sourceFile = path.join(projectRoot, "src", "diagram.svg");
       checkArchitectureOutput(html, entry, { filename: sourceFile, raw: await readFile(sourceFile, "utf8") });
@@ -780,11 +776,7 @@ export async function main(argv: string[]): Promise<number> {
     ) {
       await readCompatibleProject(target, args.preset);
     }
-    if (args.preset === "html") {
-      if (args.output) throw new Error("--output is only available for compiled presets");
-      preset = args.preset;
-      entry = await createHtml(target);
-    } else if (args.preset === "architecture") {
+    if (args.preset === "architecture") {
       preset = args.preset;
       entry = await createArchitecture(target, args.output);
     } else if (args.preset === "pitch") {
@@ -800,13 +792,15 @@ export async function main(argv: string[]): Promise<number> {
       preset = args.preset;
       entry = await createSlides(target, args.output);
     } else if (
+      args.preset === "html" ||
       args.preset === "prototype-lite" ||
       args.preset === "prototype-full" ||
       args.preset === "dossier"
     ) {
       if (args.output) throw new Error("--output is only available for compiled presets");
       preset = args.preset;
-      entry = await createScaffold(preset, target);
+      const existing = preset === "html" ? await readCompatibleProject(target, preset) : undefined;
+      entry = existing ? path.resolve(target, existing.entry) : await createScaffold(preset, target);
     } else {
       throw new Error("unknown preset");
     }
