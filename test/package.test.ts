@@ -57,7 +57,7 @@ test("installs a runnable package with every preset and the bundled skill", { ti
     [137, 80, 78, 71, 13, 10, 26, 10],
   );
 
-  for (const preset of ["prototype-lite", "prototype-full", "dossier"]) {
+  for (const preset of ["html", "prototype-lite", "prototype-full", "dossier"]) {
     const project = path.join(scratch, preset);
     await exec(executable, ["create", preset, project], { cwd: scratch });
     assert.match(await readFile(path.join(project, "index.html"), "utf8"), /<html/);
@@ -67,10 +67,10 @@ test("installs a runnable package with every preset and the bundled skill", { ti
 
   const { stdout: listOutput } = await exec(executable, ["list", "--root", scratch, "--json"], { cwd: scratch });
   const projects: Array<{ name: string; preset: string }> = JSON.parse(listOutput);
-  assert.equal(projects.length, 8);
+  assert.equal(projects.length, 9);
   assert.deepEqual(
     projects.map((project) => project.preset).sort(),
-    ["architecture", "archive", "briefing", "dossier", "pitch", "prototype-full", "prototype-lite", "slides"],
+    ["architecture", "archive", "briefing", "dossier", "html", "pitch", "prototype-full", "prototype-lite", "slides"],
   );
 
   const installHome = path.join(scratch, "home");

@@ -49,6 +49,7 @@ if (args[0] === "--version") {
     config: existsSync(configPath) ? JSON.parse(readFileSync(configPath, "utf8")) : null,
     cwd: process.cwd(),
     files: readdirSync(assets),
+    html: existsSync(join(assets, "index.html")) ? readFileSync(join(assets, "index.html"), "utf8") : null,
   }));
   writeFileSync(
     process.env.WRANGLER_OUTPUT_FILE_PATH,
@@ -232,6 +233,25 @@ if (args[0] === "--version") {
     await deployWorker(dist, distEntry, { name: "blueprint-demo" });
     const appDeployment: { files: string[] } = JSON.parse(await readFile(log, "utf8"));
     assert.deepEqual(appDeployment.files.sort(), ["app.js", "index.html"]);
+
+    const htmlProject = path.join(directory, "html-report");
+    await main(["create", "html", htmlProject]);
+    const htmlEntry = path.join(htmlProject, "index.html");
+    const authored = '<html><head><style>body{color:purple}</style></head><body><button onclick="this.textContent=1">0</button></body></html>';
+    await writeFile(htmlEntry, authored);
+    await deployWorker(htmlProject, await checkEntry(htmlProject), { name: "html-report" });
+    const htmlDeployment = JSON.parse(await readFile(log, "utf8"));
+    assert.deepEqual(htmlDeployment.files, ["index.html"]);
+    assert.equal(htmlDeployment.html, authored);
+    globalThis.fetch = async (_input: unknown, init?: RequestInit) => new Response("test", {
+      status: new Headers(init?.headers).has("Authorization") ? 200 : 401,
+    });
+    await deployWorker(htmlEntry, await checkEntry(htmlProject), {
+      name: "html-report", protect: true,
+    });
+    assert.equal(JSON.parse(await readFile(log, "utf8")).config.assets.run_worker_first, true);
+    assert.equal(await readFile(htmlEntry, "utf8"), authored);
+    globalThis.fetch = async () => new Response("ok", { status: 200 });
 
     process.env.BLUEPRINT_TEST_ACCOUNTS = JSON.stringify([
       { id: "personal-id", name: "personal" },
