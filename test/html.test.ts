@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -30,11 +30,17 @@ test("html lifecycle preserves authored reports, interactions, identity, and dep
     const html = await readFile(entry, "utf8");
     await assert.rejects(main(["create", "pitch", root]), /preset is html/);
     assert.equal(await readFile(entry, "utf8"), html);
-    for (const fragment of ['<img src="assets/photo.png">', '<script src="app.js"></script>', '<style>body{background:url(photo.png)}</style>', '<template><img src="local.png"></template>', '<img srcset="photo.png 1x">', '<iframe srcdoc="&lt;img src=\'local.png\'&gt;"></iframe>', '<table background="local.png"></table>', '<meta http-equiv="refresh" content="0; URL=\'next.html\'">', '<meta http-equiv="refresh" content="0; next.html">', '<meta http-equiv="refresh" content="0, URL=next.html">', '<iframe srcdoc="&lt;img src=\'file:///tmp/photo.png\'&gt;"></iframe>']) {
-      await writeFile(entry, `<html><head></head><body>${fragment}</body></html>`);
-      await assert.rejects(checkEntry(root), /local|srcset/);
-    }
-    await writeFile(entry, html);
+    await mkdir(path.join(root, "assets"));
+    await writeFile(path.join(root, "assets", "chart.svg"), '<svg xmlns="http://www.w3.org/2000/svg"><circle r="10"/></svg>');
+    await writeFile(path.join(root, "style.css"), 'body { background: url("assets/chart.svg"); color: purple }');
+    await writeFile(path.join(root, "app.js"), 'fetch("data.json").then(response => response.json())');
+    await writeFile(path.join(root, "data.json"), '{"count":1}');
+    const page = '<html><head><link rel="stylesheet" href="style.css"></head><body><img src="assets/chart.svg"><script src="app.js"></script></body></html>';
+    await writeFile(entry, page);
+    await main(["create", "html", root]);
+    assert.equal(await checkEntry(root), entry);
+    assert.equal(await readFile(entry, "utf8"), page);
+    assert.deepEqual(await readProject(root), manifest);
     await main(["check", root]);
     await assert.rejects(main(["create", "html", root, "--output", path.join(root, "other.html")]), /--output/);
     await writeFile(entry, "<html><head></head>broken</html>");
@@ -44,7 +50,7 @@ test("html lifecycle preserves authored reports, interactions, identity, and dep
     assert.equal(await readFile(path.join(root, ".blueprint.json"), "utf8"), before);
     await writeFile(entry, html);
     await writeFile(path.join(root, "data.json"), "{}");
-    await assert.rejects(checkEntry(root), /companion files are not published/);
+    assert.equal(await checkEntry(root), entry);
     await rm(path.join(root, "data.json"));
     await writeFile(entry, '<html><head></head><body><a href="#summary">Jump</a><img src="data:image/png;base64,AA"><img src="https://example.com/photo.png"><p id="summary">Ready</p></body></html>');
     assert.equal(await checkEntry(root), entry);

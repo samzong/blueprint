@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { chmod, cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { chmod, cp, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -22,7 +22,7 @@ test("deploys only publishable assets through Wrangler and verifies its URL", as
     path.join(bin, "wrangler"),
     `#!/usr/bin/env node
 import { appendFileSync, existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 const args = process.argv.slice(2);
 if (args[0] === "--version") {
   console.log("wrangler 4.105.0");
@@ -41,12 +41,23 @@ if (args[0] === "--version") {
     );
   });
 } else {
-  const assets = args.indexOf("--assets") >= 0 ? args[args.indexOf("--assets") + 1] : process.cwd();
   const configPath = join(process.cwd(), "wrangler.jsonc");
+  const config = existsSync(configPath) ? JSON.parse(readFileSync(configPath, "utf8")) : null;
+  const assets = args.indexOf("--assets") >= 0 ? args[args.indexOf("--assets") + 1] : resolve(process.cwd(), config.assets.directory);
+  function contents(directory, prefix = "") {
+    const files = {};
+    for (const item of readdirSync(directory, { withFileTypes: true })) {
+      const name = prefix + item.name;
+      if (item.isDirectory()) Object.assign(files, contents(join(directory, item.name), name + "/"));
+      else files[name] = readFileSync(join(directory, item.name), "utf8");
+    }
+    return files;
+  }
   writeFileSync(process.env.BLUEPRINT_TEST_LOG, JSON.stringify({
     account: process.env.CLOUDFLARE_ACCOUNT_ID,
     args,
-    config: existsSync(configPath) ? JSON.parse(readFileSync(configPath, "utf8")) : null,
+    config,
+    contents: contents(assets),
     cwd: process.cwd(),
     files: readdirSync(assets),
     html: existsSync(join(assets, "index.html")) ? readFileSync(join(assets, "index.html"), "utf8") : null,
@@ -135,7 +146,7 @@ if (args[0] === "--version") {
     assert.equal(gatedDeployment.config?.main, "worker.js");
     assert.equal(gatedDeployment.config?.assets.binding, "ASSETS");
     assert.equal(gatedDeployment.config?.assets.run_worker_first, true);
-    assert.ok(gatedDeployment.files.includes("worker.js"));
+    assert.deepEqual(gatedDeployment.files, ["index.html"]);
     assert.deepEqual(authedRequests, [
       undefined,
       `Basic ${Buffer.from(`viewer:${protectedResult.credentials?.password}`).toString("base64")}`,
@@ -237,11 +248,25 @@ if (args[0] === "--version") {
     const htmlProject = path.join(directory, "html-report");
     await main(["create", "html", htmlProject]);
     const htmlEntry = path.join(htmlProject, "index.html");
-    const authored = '<html><head><style>body{color:purple}</style></head><body><button onclick="this.textContent=1">0</button></body></html>';
-    await writeFile(htmlEntry, authored);
-    await deployWorker(htmlProject, await checkEntry(htmlProject), { name: "html-report" });
+    const authored = '<html><head><link rel="stylesheet" href="css/site.css"></head><body><img src="media/chart.svg"><script src="js/app.js"></script></body></html>';
+    const publicFiles = {
+      "index.html": authored,
+      "css/site.css": 'body { background: url("../media/chart.svg") }',
+      "js/app.js": 'fetch("data.json").then(response => response.json())',
+      "media/chart.svg": '<svg xmlns="http://www.w3.org/2000/svg"><circle r="10"/></svg>',
+      "data.json": '{"count":1}',
+    };
+    for (const [name, content] of Object.entries(publicFiles)) {
+      const filename = path.join(htmlProject, name);
+      await mkdir(path.dirname(filename), { recursive: true });
+      await writeFile(filename, content);
+    }
+    await mkdir(path.join(htmlProject, ".local"));
+    await writeFile(path.join(htmlProject, ".local", "notes.md"), "private working notes");
+    await writeFile(path.join(htmlProject, ".env"), "private environment");
+    await main(["deploy", htmlProject, "--name", "html-report"]);
     const htmlDeployment = JSON.parse(await readFile(log, "utf8"));
-    assert.deepEqual(htmlDeployment.files, ["index.html"]);
+    assert.deepEqual(htmlDeployment.contents, publicFiles);
     assert.equal(htmlDeployment.html, authored);
     globalThis.fetch = async (_input: unknown, init?: RequestInit) => new Response("test", {
       status: new Headers(init?.headers).has("Authorization") ? 200 : 401,
@@ -249,8 +274,13 @@ if (args[0] === "--version") {
     await deployWorker(htmlEntry, await checkEntry(htmlProject), {
       name: "html-report", protect: true,
     });
-    assert.equal(JSON.parse(await readFile(log, "utf8")).config.assets.run_worker_first, true);
+    const protectedHtml = JSON.parse(await readFile(log, "utf8"));
+    assert.equal(protectedHtml.config.assets.run_worker_first, true);
+    assert.deepEqual(protectedHtml.contents, publicFiles);
     assert.equal(await readFile(htmlEntry, "utf8"), authored);
+    await symlink(entry, path.join(htmlProject, "outside.html"));
+    await assert.rejects(deployWorker(htmlProject, htmlEntry, { name: "html-report" }), /symbolic links/);
+    await rm(path.join(htmlProject, "outside.html"));
     globalThis.fetch = async () => new Response("ok", { status: 200 });
 
     process.env.BLUEPRINT_TEST_ACCOUNTS = JSON.stringify([

@@ -1,20 +1,18 @@
 # html
 
-An unthemed, single-file HTML Artifact. The CLI owns identity, discovery, contract validation, preview, and publication. The agent owns all content, layout, CSS, and optional JavaScript. There is no compiler, Theme, design-system reference, font, framework, or injected runtime.
+A free-form, unthemed HTML Artifact. The agent owns content, layout, CSS, JavaScript, and local assets. Blueprint uses its existing metadata, discovery, validation, preview, and publication lifecycle. No compiler, Theme, design system, font, framework, or runtime is injected.
 
 ```bash
 blueprint create html .local/report
 blueprint check .local/report
 blueprint preview .local/report
-blueprint list --root .local --json
+blueprint deploy .local/report
 ```
 
-Author the project-root `index.html` directly. Keep explicit `<html>`, `<head>`, and `<body>` elements. The CLI creates `.blueprint.json`; preserve its identity, entry, and deployment record. Repeated create checks the existing entry without replacing it or advancing `createdWith`. Upgrade applies required contract corrections in place and advances `createdWith` only after verification; it is a verified contract marker, not content revision history.
+Author the root `index.html` and any companion images, stylesheets, scripts, pages, or data files in the Artifact directory. Relative paths are preserved in preview and publication; single-file HTML also works. Checks apply the existing document basics without imposing visual or framework structure. Exercise resource loading and interactions in preview before publication.
 
-## Asset boundary
+The Artifact directory is the site's document root. Keep private working notes under `.local/` or outside the Artifact. Deployment excludes dotfiles, hidden directories (including `.blueprint.json` and `.local/`), and `node_modules`; symbolic links are rejected to prevent assets escaping the project boundary. Remaining files are public site content.
 
-Publication copies only `index.html`. No companion files or directories are supported: the Artifact directory contains only `index.html` and `.blueprint.json`. Put working notes outside it. Inline CSS, scripts, and data assets, or use absolute external resources (prefer HTTPS). Same-document fragment references are supported. Local references in markup (including iframe `srcdoc`, background attributes, and refresh destinations) and CSS are rejected by checks; `<base>`, `srcset`, CSS imports, CSS escapes, and CSS image sets are unsupported by the portable validator. Use `src` and inline styles instead.
+Let the CLI own `.blueprint.json`. Repeated create preserves authored content, identity, `createdWith`, and deployment metadata. Upgrade applies required contract corrections in place without regenerating HTML or styling. Advance `createdWith` only after successful verification; it records the last verified Blueprint contract, not content history.
 
-JavaScript may implement arbitrary interactions but must not load local files, modules, or data at runtime. Checks do not execute JavaScript or analyze dynamically constructed URLs; the agent must exercise those paths in the browser before requesting publication. External resource availability, content accuracy, accessibility, and visual quality require runtime review.
-
-Never regenerate over customized HTML or styling. Report required conflicts. Preview through `blueprint preview`; deploy through the existing `blueprint deploy` flow, optionally with `--protect`, only after explicit publication authorization.
+Use the existing preview and deployment flows, including `--protect`. Publication still requires explicit authorization.

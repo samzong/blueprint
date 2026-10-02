@@ -83,7 +83,7 @@ Presets:
   architecture, pitch, briefing, archive, slides
     Build one HTML file from source content
   html
-    Create an unthemed single-file HTML artifact
+    Create an unthemed HTML artifact
   prototype-lite
     Create a single-file React prototype
   prototype-full, dossier
@@ -396,7 +396,7 @@ async function checkPresetOutput(
 ): Promise<void> {
   switch (preset) {
     case "html":
-      await checkHtmlOutput(html, entry, projectRoot);
+      await checkHtmlOutput(entry, projectRoot);
       return;
     case "architecture": {
       const sourceFile = path.join(projectRoot, "src", "diagram.svg");

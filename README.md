@@ -50,7 +50,7 @@ Available presets:
 
 | Preset           | Output                                                                                            | Theme model                                                           |
 | ---------------- | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `html`           | Agent-authored single-file HTML dashboard, report, or interactive tool | Unthemed; agent owns all content, layout, CSS, and optional JavaScript |
+| `html`           | Agent-authored HTML dashboard, report, or interactive tool | Unthemed; agent owns all content, layout, CSS, and optional JavaScript |
 | `architecture`   | Agent-designed SVG in a reviewable HTML shell with deterministic SVG/PNG export                    | Project-specific composition derived from Recall and rx visual DNA     |
 | `pitch`          | Compiled single-file story                                                                        | No named Theme; shared design system and fixed Preset baseline        |
 | `briefing`       | Compiled single-file slide deck                                                                   | Fixed `briefing` Theme                                                |
@@ -63,7 +63,7 @@ Available presets:
 
 A Preset is the Artifact contract, not a visual style. Architecture diagrams are composed for the actual system instead of selected from a Theme switch. `slides` exposes `dify-x`; `briefing` and `archive` use fixed Themes. See [CONTEXT.md](CONTEXT.md) for canonical terminology and ownership.
 
-For standalone HTML, run `blueprint create html .local/report`, edit `.local/report/index.html`, then run `blueprint check .local/report` and `blueprint preview .local/report`. No Theme, font, chrome, or framework is injected. Repeating create preserves existing content and identity. The [HTML contract](skill/blueprint/references/preset-html.md) requires a single file: inline companion assets or use absolute external resources (prefer HTTPS); local asset references and companion files are rejected before publication.
+For free-form HTML, run `blueprint create html .local/report`, author the page and its local assets, then use the existing `check`, `preview`, and `deploy` commands. No Theme, font, chrome, or framework is injected. Repeating create preserves content and identity. The Artifact directory is the site's document root; deployment preserves relative paths and excludes dotfiles, hidden directories, and `node_modules`. Keep private working notes under `.local/` or outside the Artifact. See the [HTML contract](skill/blueprint/references/preset-html.md).
 
 For architecture work, ask the Agent to draw the diagram. It inspects the project and directly authors the complete `src/diagram.svg`; Blueprint validates it, wraps it in an HTML review surface, and exports that same drawing as SVG or PNG. You do not provide nodes, coordinates, or layout JSON.
 

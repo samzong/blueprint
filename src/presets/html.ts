@@ -1,16 +1,7 @@
 import { lstat, mkdir, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { parse } from "parse5";
-
-import { projectFilename, readCompatibleProject } from "../project.ts";
-import { assertPortableCss, isElement, localReference, type HtmlNode, urlAttributes } from "./shared.ts";
-
-function checkReference(value: string, entry: string): void {
-  if (value.trim() && (localReference(value) || /^\s*file:/i.test(value))) {
-    throw new Error(`${entry}: local reference ${value} is not published; inline it or use an absolute external URL`);
-  }
-}
+import { readCompatibleProject } from "../project.ts";
 
 export async function createHtml(project: string): Promise<string> {
   const root = path.resolve(project);
@@ -23,35 +14,9 @@ export async function createHtml(project: string): Promise<string> {
   return entry;
 }
 
-export async function checkHtmlOutput(html: string, entry: string, root: string): Promise<void> {
+
+export async function checkHtmlOutput(entry: string, root: string): Promise<void> {
   if (path.resolve(entry) !== path.join(path.resolve(root), "index.html") || (await lstat(entry)).isSymbolicLink()) {
     throw new Error(`${entry}: html entry must be a regular project-root index.html`);
-  }
-  const companions = (await readdir(root)).filter((name) => name !== "index.html" && name !== projectFilename);
-  if (companions.length > 0) {
-    throw new Error(`${entry}: html is single-file; companion files are not published: ${companions.join(", ")}`);
-  }
-  const nodes: HtmlNode[] = [...parse(html).childNodes];
-  for (const node of nodes) {
-    if (!isElement(node)) continue;
-    if (node.tagName === "base") throw new Error(`${entry}: <base> is not supported in single-file HTML`);
-    if (node.tagName === "meta" && node.attrs.some((attribute) => attribute.name === "http-equiv" && attribute.value.trim().toLowerCase() === "refresh")) {
-      const content = node.attrs.find((attribute) => attribute.name === "content")?.value ?? "";
-      const destination = /[;,]\s*(?:url\s*=\s*)?(.*)/i.exec(content)?.[1];
-      if (destination) checkReference(destination.trim().replace(/^(['"])(.*)\1$/, "$2"), entry);
-    }
-    for (const attribute of node.attrs) {
-      if (attribute.name === "style") assertPortableCss(attribute.value, entry);
-      if (attribute.name === "srcdoc") nodes.push(...parse(attribute.value).childNodes);
-      if (attribute.name === "srcset" || attribute.name === "imagesrcset") {
-        throw new Error(`${entry}: srcset is not supported; use an inline or HTTPS src`);
-      }
-      if (urlAttributes.includes(attribute.name) || attribute.name === "background") checkReference(attribute.value, entry);
-    }
-    if (node.tagName === "style") {
-      assertPortableCss(node.childNodes.map((child) => "value" in child ? child.value : "").join(""), entry);
-    }
-    nodes.push(...node.childNodes);
-    if ("content" in node) nodes.push(...node.content.childNodes);
   }
 }
