@@ -32,6 +32,7 @@ flowchart TB
     Sources["Agent-authored sources<br/>diagram.svg · semantic content"]:::artifact
     Artifact["Managed Artifact<br/>entry · inline SVG · chrome/runtime"]:::artifact
     ProjectMeta[".blueprint.json<br/>identity · preset · createdWith<br/>deployment record · protection"]:::artifact
+    Html["Unthemed html Artifact<br/>agent-owned HTML · CSS · JS · local assets<br/>existing lifecycle · no injected chrome"]:::artifact
     Portable["Portable architecture exports<br/>SVG · PNG"]:::artifact
 
     Preview["Local preview<br/>gofs or Vite"]:::external
@@ -39,9 +40,14 @@ flowchart TB
 
     User --> Agent
     Agent --> Skill
-    Skill --> Refs
+    Skill -->|"themed / diagram workflows"| Refs
     Skill -->|"invokes"| Commands
     Skill -->|"writes"| Sources
+    Skill -->|"direct authoring · no Theme references"| Html
+    Commands -->|"minimal create · preserve on repeat"| Html
+    Validator -->|"HTML delivery contract"| Html
+    Html --> Preview
+    Html --> Wrangler
     Refs -.->|"contracts"| Catalog
     Compiler --> Catalog
     Validator --> Catalog

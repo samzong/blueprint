@@ -1,13 +1,13 @@
 import { execFile, spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { copyFile, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { copyFile, cp, lstat, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
 
 import { chooseOne } from "./interactive.ts";
-import { projectFilename, readProject } from "./project.ts";
+import { findProjectOrNull, projectFilename, readProject } from "./project.ts";
 
 const execFileAsync = promisify(execFile);
 
@@ -220,7 +220,19 @@ export async function deployWorker(
       }
     }
 
-    if (singleFile) {
+    const project = await findProjectOrNull(entry);
+    if (project?.manifest.preset === "html") {
+      assets = path.join(temporary, "site");
+      await cp(project.root, assets, {
+        recursive: true,
+        filter: async (source) => {
+          const parts = path.relative(project.root, source).split(path.sep);
+          if (parts.some((part) => part.startsWith(".") || part === "node_modules")) return false;
+          if ((await lstat(source)).isSymbolicLink()) throw new Error(`${source}: symbolic links are not publishable site assets`);
+          return true;
+        },
+      });
+    } else if (singleFile) {
       assets = path.join(temporary, "site");
       await mkdir(assets);
       await copyFile(entry, path.join(assets, "index.html"));

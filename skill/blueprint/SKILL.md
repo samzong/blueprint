@@ -2,7 +2,7 @@
 name: blueprint
 description: >
   Create, upgrade, rebuild, validate, preview, discover, export, and deploy blueprint-managed
-  Artifacts using architecture, pitch, briefing, slides, archive, prototype, or dossier presets.
+  Artifacts using html, architecture, pitch, briefing, slides, archive, prototype, or dossier presets.
   Use when the user mentions blueprint, asks to create a page, demo, deck,
   report, architecture diagram, or Markdown archive, or wants to upgrade, check, preview, export, list, or
   publish an existing blueprint project. Do not use for unrelated websites or
@@ -37,6 +37,7 @@ Ask at most one blocking question and only for missing information that changes 
 
 | Intent | Preset |
 |---|---|
+| Standalone HTML dashboard, explainer, report, or plain-JavaScript decision tool | `html` |
 | Architecture diagram, system boundary, runtime topology, data flow, concept explainer | `architecture` |
 | Investor pitch, product introduction, landing page | `pitch` |
 | Stage presentation, conference talk, speaker deck, PPT | `slides` |
@@ -44,6 +45,8 @@ Ask at most one blocking question and only for missing information that changes 
 | Research, comparison, diligence, white paper | `dossier` |
 | Responsibility, process, governance, training, internal alignment | `briefing` |
 | Markdown library, knowledge base, searchable document set | `archive` |
+
+Route ordinary agent-authored standalone HTML to `html`. Choose content, layout, CSS, and optional JavaScript independently. Do not load design-system or Theme references for `html`. Use another themed workflow when explicitly selected; preserve the existing Preset for managed Artifacts.
 
 Ask for the primary audience or delivery form only when multiple rows or none match.
 
@@ -70,6 +73,7 @@ When rebuilding a legacy page or time-sensitive product story:
 
 | Preset | References |
 |---|---|
+| `html` | [HTML contract](references/preset-html.md) only |
 | `architecture` | [diagram direction](references/architecture-diagrams.md), [architecture contract](references/preset-architecture.md) |
 | `pitch` | [design system](references/design-system.md), [pitch contract](references/preset-pitch.md) |
 | `briefing` | [design system](references/design-system.md), [briefing theme](references/theme-briefing.md), [briefing contract](references/preset-briefing.md) |
@@ -89,8 +93,9 @@ When rebuilding a legacy page or time-sensitive product story:
    blueprint check <output>/index.html
    ```
 
-4. For `prototype-lite`, `prototype-full`, or `dossier`, run `blueprint create <preset> <output>` before filling topic-specific content.
-5. For `architecture`, render and inspect the PNG before returning the review path. For other Presets, return the output path and the appropriate preview command. Do not install dependencies or start a server unless the user requested preview or deployment.
+4. For `html`, run `blueprint create html <output>` first, then directly author `<output>/index.html` and run `blueprint check <output>`. Keep the stable directory and CLI-owned manifest. Author local images, CSS, JavaScript, and data in any layout under the Artifact directory. No framework bootstrap is required. Keep private working notes under `.local/` or outside the Artifact; dotfiles, hidden directories, and `node_modules` are not published. Repeating create checks and preserves existing HTML.
+5. For `prototype-lite`, `prototype-full`, or `dossier`, run `blueprint create <preset> <output>` before filling topic-specific content.
+6. For `architecture`, render and inspect the PNG before returning the review path. For other Presets, return the output path and the appropriate preview command. Do not install dependencies or start a server unless the user requested preview or deployment.
 
 Let `blueprint create` own the `.blueprint.json` schema and initial manifest. Never create, copy, delete, add, remove, or rename manifest fields. During a verified upgrade, the Agent may update only the existing `createdWith` value.
 
@@ -100,11 +105,12 @@ Treat an upgrade as a preservation-first semantic merge, not regeneration.
 
 1. Run `blueprint list --json` and `blueprint --version`. Use the discovered `preset` to select the current references. Treat the discovered `createdWith` as the single version marker for the latest Blueprint preset contract successfully applied to the Artifact.
 2. Inspect the current sources, output, and Git diff or history when available before writing. Treat content, branding, customized themes, custom CSS, and layout as user-owned even when they began as preset defaults.
-3. Compare the Artifact with the current preset references. Apply missing Blueprint-owned runtime, compiler chrome, validation, accessibility, and required structural improvements with the smallest patch. Do not retrofit new default styling unless the user asks for it.
-4. Preserve user-owned changes. When a required Blueprint change overlaps them, merge around the customization when safe; otherwise stop and report the conflict instead of overwriting it.
-5. Do not copy a fresh preset over the project or begin by rerunning `blueprint create`. For compiled presets, regenerate compiler-owned output only after preserving any output-only customization in semantic sources. For scaffold presets, patch the existing source in place.
-6. Run `blueprint check <target>`, visually verify the exact upgraded behavior, and inspect the final diff for lost content, branding, styles, or layout.
-7. Only after the upgrade and verification succeed, update the existing `.blueprint.json.createdWith` value to the exact current Blueprint version while preserving every other manifest field. If no preset change was applied or verification fails, leave it unchanged.
+3. For `html`, preserve the complete entry, CSS, and JavaScript. Apply only required delivery-contract corrections in place; never inject a Theme, design system, chrome, or framework. If the existing content conflicts with the current HTML delivery contract, report the concrete conflict instead of overwriting it.
+4. Compare the Artifact with the current preset references. Apply missing Blueprint-owned runtime, compiler chrome, validation, accessibility, and required structural improvements with the smallest patch. Do not retrofit new default styling unless the user asks for it.
+5. Preserve user-owned changes. When a required Blueprint change overlaps them, merge around the customization when safe; otherwise stop and report the conflict instead of overwriting it.
+6. Do not copy a fresh preset over the project or begin by rerunning `blueprint create`. For compiled presets, regenerate compiler-owned output only after preserving any output-only customization in semantic sources. For scaffold presets, patch the existing source in place.
+7. Run `blueprint check <target>`, visually verify the exact upgraded behavior, and inspect the final diff for lost content, branding, styles, or layout.
+8. Only after the upgrade and verification succeed, update the existing `.blueprint.json.createdWith` value to the exact current Blueprint version while preserving every other manifest field. For `html`, successfully checking the unchanged entry against the current delivery contract also qualifies as a verified contract upgrade. `createdWith` records the last verified Blueprint contract version, not content history or rollback support. If no preset change was applied to another Preset or verification fails, leave it unchanged.
 
 ## Operate a project
 
