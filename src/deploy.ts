@@ -10,6 +10,7 @@ import { chooseOne } from "./interactive.ts";
 import { findProjectOrNull, projectFilename, readProject } from "./project.ts";
 
 const execFileAsync = promisify(execFile);
+export const maxWorkerNameLength = 54;
 
 type Account = {
   id: string;
@@ -179,6 +180,9 @@ export async function deployWorker(
   entry: string,
   options: { account?: string; name: string; protect?: boolean; credentials?: DeployCredentials },
 ): Promise<{ account: string; url: string; credentials?: DeployCredentials }> {
+  if (options.name.length > maxWorkerNameLength) {
+    throw new Error(`Worker names must be at most ${maxWorkerNameLength} characters for preview URLs; pass --name <shorter-name>`);
+  }
   let version: string;
   try {
     ({ stdout: version } = await execFileAsync("wrangler", ["--version"], { encoding: "utf8" }));

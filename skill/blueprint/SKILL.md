@@ -142,7 +142,7 @@ Derive `worker-name` without asking:
 - Inside a Git repository: `<repo-name>-<task-name>`
 - Outside a Git repository: `<task-name>`
 
-Use the nearest Git root directory for `repo-name` and a stable task slug for `task-name`. Normalize to lowercase hyphen-case and keep the name within 63 characters. Honor an explicit user-provided name.
+Use the nearest Git root directory for `repo-name` and a stable task slug for `task-name`. Normalize to lowercase hyphen-case and keep the name within 54 characters for the current preview-backed deployment path. When the normalized name exceeds 54 characters, take its first 45 characters, remove trailing hyphens, and append `-` plus the first eight lowercase hex characters of the full normalized name's SHA-256 digest. The CLI uses the same rule for auto-derived names so long names sharing a prefix remain distinct. Short names stay unchanged. Honor an explicit user-provided name; explicit or recorded deployment names over the limit fail before Wrangler runs. Pass `--name <shorter-name>` to choose a different Worker explicitly.
 
 Omit `--account` by default. Let the CLI resolve the recorded account, `CLOUDFLARE_ACCOUNT_ID`, or the only available account. Ask only when no unique account can be resolved. Return the verified published URL.
 

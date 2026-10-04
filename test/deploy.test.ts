@@ -24,6 +24,7 @@ test("deploys only publishable assets through Wrangler and verifies its URL", as
 import { appendFileSync, existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 const args = process.argv.slice(2);
+appendFileSync(process.env.BLUEPRINT_TEST_LOG + ".calls", JSON.stringify(args) + "\\n");
 if (args[0] === "--version") {
   console.log("wrangler 4.105.0");
 } else if (args[0] === "whoami") {
@@ -79,6 +80,49 @@ if (args[0] === "--version") {
   globalThis.fetch = async () => new Response("ok", { status: 200 });
 
   try {
+    const repository = path.join(directory, "ai-call-week-20260807-to-20260814-utc-delivery");
+    await mkdir(path.join(repository, ".git"), { recursive: true });
+    const artifact = path.join(repository, "token-latency");
+    const artifactEntry = await createScaffold("html", artifact);
+    await recordProject(artifact, "html", artifactEntry, "0.1.0");
+    assert.equal(await main(["deploy", artifact]), 0);
+    const derived: { args: string[] } = JSON.parse(await readFile(log, "utf8"));
+    const derivedName = derived.args[derived.args.indexOf("--name") + 1];
+    assert.equal(derivedName.length, 54);
+    const sibling = path.join(repository, "token-load");
+    const siblingEntry = await createScaffold("html", sibling);
+    await recordProject(sibling, "html", siblingEntry, "0.1.0");
+    assert.equal(await main(["deploy", sibling]), 0);
+    const siblingDeployment: { args: string[] } = JSON.parse(await readFile(log, "utf8"));
+    const siblingName = siblingDeployment.args[siblingDeployment.args.indexOf("--name") + 1];
+    assert.ok(siblingName.length <= 54);
+    assert.notEqual(siblingName, derivedName);
+    assert.equal(await main(["deploy", artifact]), 0);
+    const repeated: { args: string[] } = JSON.parse(await readFile(log, "utf8"));
+    assert.equal(repeated.args[repeated.args.indexOf("--name") + 1], derivedName);
+    const boundaryName = "a".repeat(54);
+    assert.equal(await main(["deploy", artifact, "--name", boundaryName]), 0);
+    const boundary: { args: string[] } = JSON.parse(await readFile(log, "utf8"));
+    assert.equal(boundary.args[boundary.args.indexOf("--name") + 1], boundaryName);
+    const callsBefore = await readFile(log + ".calls", "utf8");
+    const manifestBefore = await readFile(path.join(artifact, ".blueprint.json"), "utf8");
+    for (const protect of [false, true]) {
+      await assert.rejects(
+        main(["deploy", artifact, "--name", "a".repeat(55), ...(protect ? ["--protect"] : [])]),
+        /54 characters.*--name/,
+      );
+    }
+    assert.equal(await readFile(log + ".calls", "utf8"), callsBefore);
+    assert.equal(await readFile(path.join(artifact, ".blueprint.json"), "utf8"), manifestBefore);
+    const saved = JSON.parse(manifestBefore);
+    saved.deployment.workerName = "a".repeat(55);
+    const oversizedManifest = JSON.stringify(saved);
+    await writeFile(path.join(artifact, ".blueprint.json"), oversizedManifest);
+    await assert.rejects(main(["deploy", artifact]), /54 characters.*--name/);
+    assert.equal(await readFile(log + ".calls", "utf8"), callsBefore);
+    assert.equal(await readFile(path.join(artifact, ".blueprint.json"), "utf8"), oversizedManifest);
+    await rm(repository, { recursive: true });
+
     const result = await deployWorker(entry, await checkEntry(entry), { name: "blueprint-demo" });
     const deployment: { account: string; args: string[]; cwd: string; files: string[] } = JSON.parse(
       await readFile(log, "utf8"),

@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFile, stat } from "node:fs/promises";
 import { createServer } from "node:net";
 import path from "node:path";
@@ -14,7 +15,7 @@ import {
 } from "@kitup/sdk";
 import { parse, type DefaultTreeAdapterMap } from "parse5";
 
-import { deployWorker } from "./deploy.ts";
+import { deployWorker, maxWorkerNameLength } from "./deploy.ts";
 import { chooseOne, type Choice } from "./interactive.ts";
 import { checkArchitectureOutput, createArchitecture, exportArchitecture } from "./presets/architecture.ts";
 import { checkArchiveOutput, createArchive } from "./presets/archive.ts";
@@ -687,10 +688,12 @@ async function deriveWorkerName(projectRoot: string, projectName: string): Promi
   const value = (repository ? `${repository}-${projectName}` : projectName)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 63)
-    .replace(/-+$/g, "");
+    .replace(/^-+|-+$/g, "");
   if (!value) throw new Error("cannot derive a Worker name; pass --name <name>");
+  if (value.length > maxWorkerNameLength) {
+    const suffix = createHash("sha256").update(value).digest("hex").slice(0, 8);
+    return `${value.slice(0, maxWorkerNameLength - suffix.length - 1).replace(/-+$/g, "")}-${suffix}`;
+  }
   return value;
 }
 
