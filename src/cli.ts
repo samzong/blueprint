@@ -15,6 +15,7 @@ import {
 } from "@kitup/sdk";
 import { parse, type DefaultTreeAdapterMap } from "parse5";
 
+import { checkPalette, type PaletteKind, type PaletteMode } from "./palette.ts";
 import { deployWorker, maxWorkerNameLength } from "./deploy.ts";
 import { chooseOne, type Choice } from "./interactive.ts";
 import { checkArchitectureOutput, createArchitecture, exportArchitecture } from "./presets/architecture.ts";
@@ -41,6 +42,9 @@ export type ParsedArgs = {
   installFlags?: InstallFlagValues;
   json?: boolean;
   name?: string;
+  mode?: PaletteMode;
+  kind?: PaletteKind;
+  surface?: string;
   output?: string;
   port: number;
   preset?: string;
@@ -58,6 +62,7 @@ Usage:
 Commands:
   create <preset> [directory]  Create a project from a preset
   check [target]                Validate generated output
+  palette check <hex,...>       Screen chart colors numerically
   preview [target]              Preview locally
   export [target]               Export an architecture SVG or PNG
   deploy [target]               Publish to Cloudflare Workers
@@ -76,6 +81,20 @@ Global options:
 Run 'blueprint <command> --help' for command options.`;
 
 const commandHelp: Record<string, string> = {
+  palette: `Usage:
+  blueprint palette check <hex,...> --mode <light|dark> [options]
+
+Options:
+  --kind <kind>     categorical (default), sequential, diverging, status, mark, text
+  --surface <hex>   Opaque surface (default: white/light or #111827/dark)
+  --json            Print complete numeric results
+  -h, --help         Show help
+
+Categorical/status: all pairs, normal + Machado 2009 protan/deutan/tritan.
+Heuristic distance policy: OKLab >= 0.08; WCAG contrast: marks >= 3:1, text >= 4.5:1.
+Sequential: adjacent stops + monotonic lightness; diverging: all pairs + arms.
+Tritan simulation approximates tritanomaly, not tritanopia.
+PASS means numeric screening only, not accessibility conformance.`,
   create: `Usage:
   blueprint create <preset> [directory] [--output <file>]
 
@@ -162,6 +181,9 @@ export function parseArgs(argv: string[]): ParsedArgs {
   const [command, ...rest] = argv;
   const positionals: string[] = [];
   const agents: string[] = [];
+  let mode: PaletteMode | undefined;
+  let kind: PaletteKind = "categorical";
+  let surface: string | undefined;
   let account: string | undefined;
   let dryRun = false;
   let format: "png" | "svg" | undefined;
@@ -179,6 +201,19 @@ export function parseArgs(argv: string[]): ParsedArgs {
 
   for (let index = 0; index < rest.length; index += 1) {
     const value = rest[index];
+
+    if (command === "palette" && ["--mode", "--kind", "--surface"].includes(value)) {
+      const option = rest[++index];
+      if (!option || option.startsWith("-")) throw new Error(`${value} requires a value`);
+      if (value === "--mode") {
+        if (option !== "light" && option !== "dark") throw new Error("--mode must be light or dark");
+        mode = option;
+      } else if (value === "--kind") {
+        if (!["categorical", "sequential", "diverging", "status", "mark", "text"].includes(option)) throw new Error("unknown palette kind");
+        kind = option as PaletteKind;
+      } else surface = option;
+      continue;
+    }
 
     if (value === "--output" && (command === "create" || command === "export")) {
       output = rest[++index];
@@ -199,7 +234,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
       continue;
     }
 
-    if (value === "--json" && command === "list") {
+    if (value === "--json" && (command === "list" || command === "palette")) {
       json = true;
       continue;
     }
@@ -270,6 +305,11 @@ export function parseArgs(argv: string[]): ParsedArgs {
       throw new Error(`unknown option: ${value}`);
     }
     positionals.push(value);
+  }
+
+  if (command === "palette") {
+    if (positionals.length !== 2 || positionals[0] !== "check" || !mode) throw new Error("expected palette check <hex,...> --mode light|dark");
+    return { command, target: positionals[1], mode, kind, surface, json, port };
   }
 
   if (command === "create") {
@@ -750,6 +790,15 @@ export async function main(argv: string[]): Promise<number> {
       return 1;
     }
     return 0;
+  }
+
+  if (args.command === "palette") {
+    const result = checkPalette(args.target!.split(",").map((color) => color.trim()), args.mode!, args.kind, args.surface);
+    process.stdout.write(args.json ? `${JSON.stringify(result, null, 2)}\n` :
+      `${result.pass ? "PASS" : "FAIL"} palette ${result.kind} (${result.mode}, surface ${result.surface})\n${result.scope}\n` +
+      result.samples.map((sample, index) => `${index + 1} ${sample.color} L=${sample.L.toFixed(4)} C=${sample.C.toFixed(4)} contrast=${sample.contrast.toFixed(3)}:1`).join("\n") + "\n" +
+      result.failures.map((failure) => `FAIL ${failure}\n`).join(""));
+    return result.pass ? 0 : 1;
   }
 
   if (args.command === "list") {

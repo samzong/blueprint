@@ -16,7 +16,7 @@ is **incomplete**.
 Update the diagram when any of these change:
 
 - supported Preset or Theme contract boundaries
-- CLI command surface (`create`, `check`, `preview`, `export`, `deploy`, `list`, `skill`)
+- CLI command surface (`create`, `check`, `preview`, `export`, `deploy`, `list`, `palette check`, `skill`)
 - Skill ↔ CLI ownership (what the Skill decides vs what the CLI owns)
 - compiler, scaffold, validator, or chrome/runtime ownership
 - `.blueprint.json` schema or deployment record shape
