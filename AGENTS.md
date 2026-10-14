@@ -18,3 +18,8 @@
 - Runtime assets such as `src/shared/deck.js` must consume compiler-injected locale data and keep English fallbacks.
 - Before shipping, inspect staged added lines with `git diff --cached --unified=0 | rg --pcre2 '^\+(?!\+\+).*\p{Script=Han}'`.
 - Non-localization CJK additions block `/ship`.
+
+## Chart guidance
+
+- Accept changes to `skill/blueprint/references/chart-method.md` or the Skill's chart routing with a side-by-side run of one brief by the same model, with and without the change. A correctness review alone does not show that agents follow the guidance.
+- When a re-run shows an existing prose rule was not followed, replace it with a copyable pattern or a computed check instead of adding more prose.
