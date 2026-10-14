@@ -4,7 +4,7 @@ description: >
   Create, upgrade, rebuild, validate, preview, discover, export, and deploy blueprint-managed
   Artifacts using html, architecture, pitch, briefing, slides, archive, prototype, or dossier presets.
   Use when the user mentions blueprint, asks to create a page, demo, deck,
-  report, architecture diagram, or Markdown archive, or wants to upgrade, check, preview, export, list, or
+  report, chart, dashboard, architecture diagram, or Markdown archive, or wants to upgrade, check, preview, export, list, or
   publish an existing blueprint project. Do not use for unrelated websites or
   non-architecture image outputs.
 ---
@@ -81,6 +81,8 @@ When rebuilding a legacy page or time-sensitive product story:
 | `archive` | [win98-web theme](references/theme-win98-web.md), [archive contract](references/preset-archive.md) |
 | `prototype-lite`, `prototype-full` | [design system](references/design-system.md), [prototype contract](references/preset-prototype.md) |
 | `dossier` | [design system](references/design-system.md), [dossier contract](references/preset-dossier.md) |
+
+When an Artifact contains charts, read [chart method](references/chart-method.md) before authoring or revising them. Within Blueprint Artifacts this reference governs chart method, even when another chart Skill is available. Apply its form/encoding rules before drawing and complete its rendered acceptance steps before delivery. It supplies copyable defaults for stated surfaces and rendered acceptance checks; it does not select a Theme or alter the `html` scaffold. Keep the dossier entity-slot contract.
 
 ### Generate
 

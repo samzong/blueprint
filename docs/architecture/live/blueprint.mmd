@@ -14,13 +14,15 @@ flowchart TB
     Agent["Host coding agent"]:::actor
 
     Skill["Bundled Agent Skill<br/>preset selection · research · direct composition<br/>upgrade merge · visual judgment"]:::skill
-    Refs["Skill references<br/>preset-*.md · architecture-diagrams.md<br/>theme-*.md · design-system.md"]:::skill
+    Refs["Skill references<br/>preset-*.md · architecture-diagrams.md<br/>theme-*.md · design-system.md · chart-method.md"]:::skill
 
     subgraph CLI["blueprint CLI"]
         direction TB
-        Commands["Commands<br/>create · check · preview · export<br/>deploy · list · skill install"]:::cli
+        Commands["Commands<br/>create · check · preview · export<br/>deploy · list · palette check · skill install"]:::cli
         Compiler["Presets + compiler / scaffold<br/>src/presets · shared chrome · SVG wrapper"]:::cli
         Validator["Validator<br/>check + preset contracts"]:::cli
+        Palette["Palette screening<br/>OKLCH · Machado CVD · WCAG contrast<br/>numeric policy · no Artifact inspection"]:::cli
+        Commands --> Palette
         Manifest["Project manifest owner<br/>.blueprint.json schema"]:::cli
         Commands --> Compiler
         Commands --> Validator
@@ -40,7 +42,7 @@ flowchart TB
 
     User --> Agent
     Agent --> Skill
-    Skill -->|"themed / diagram workflows"| Refs
+    Skill -->|"themed / diagram workflows · chart method"| Refs
     Skill -->|"invokes"| Commands
     Skill -->|"writes"| Sources
     Skill -->|"direct authoring · no Theme references"| Html
