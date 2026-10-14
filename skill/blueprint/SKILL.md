@@ -82,7 +82,7 @@ When rebuilding a legacy page or time-sensitive product story:
 | `prototype-lite`, `prototype-full` | [design system](references/design-system.md), [prototype contract](references/preset-prototype.md) |
 | `dossier` | [design system](references/design-system.md), [dossier contract](references/preset-dossier.md) |
 
-When an Artifact contains charts, read [chart method](references/chart-method.md) before authoring or revising them. Within Blueprint Artifacts this reference governs chart method, even when another chart Skill is available. Apply its form/encoding rules before drawing and complete its rendered acceptance steps before delivery. It supplies copyable defaults for stated surfaces and rendered acceptance checks; it does not select a Theme or alter the `html` scaffold. Keep the dossier entity-slot contract.
+When an Artifact contains charts, read [chart method](references/chart-method.md) before authoring or revising them. Within Blueprint Artifacts this reference governs chart method, even when another chart Skill is available. Apply its form/encoding rules before drawing and complete its rendered acceptance steps before delivery. Copy its dashboard shell and shared label-column layout for dashboards, bind chart colors through CSS custom properties, and verify light → dark → filter → light when both modes are supported. It supplies copyable defaults for stated surfaces and rendered acceptance checks; it does not select a Theme or alter the `html` scaffold. Keep the dossier entity-slot contract.
 
 ### Generate
 
