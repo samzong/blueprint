@@ -13,18 +13,18 @@ import {
   runBundledSkillInstall,
   type InstallFlagValues,
 } from "@kitup/sdk";
-import { parse, type DefaultTreeAdapterMap } from "parse5";
 
+import { checkDocumentBasics, checkPresetOutput } from "./presets/check.ts";
 import { checkPalette, type PaletteKind, type PaletteMode } from "./palette.ts";
 import { deployWorker, maxWorkerNameLength } from "./deploy.ts";
 import { chooseOne, type Choice } from "./interactive.ts";
-import { checkArchitectureOutput, createArchitecture, exportArchitecture } from "./presets/architecture.ts";
-import { checkArchiveOutput, createArchive } from "./presets/archive.ts";
-import { checkBriefingOutput, createBriefing } from "./presets/briefing.ts";
-import { checkPitchOutput, createPitch } from "./presets/pitch.ts";
-import { checkScaffoldOutput, createScaffold } from "./presets/scaffold.ts";
-import { checkSlidesOutput, createSlides } from "./presets/slides.ts";
-import { urlAttributes } from "./presets/shared.ts";
+import { createArchitecture, exportArchitecture } from "./presets/architecture.ts";
+import { createArchive } from "./presets/archive.ts";
+import { createBriefing } from "./presets/briefing.ts";
+import { createPitch } from "./presets/pitch.ts";
+import { createProgress } from "./presets/progress.ts";
+import { createScaffold } from "./presets/scaffold.ts";
+import { createSlides } from "./presets/slides.ts";
 import {
   findProject,
   findProjectOrNull,
@@ -71,7 +71,7 @@ Commands:
   help [command]                Show help
 
 Presets:
-  architecture, pitch, briefing, archive, slides
+  architecture, pitch, briefing, archive, slides, progress
   html, prototype-lite, prototype-full, dossier
 
 Global options:
@@ -99,7 +99,7 @@ PASS means numeric screening only, not accessibility conformance.`,
   blueprint create <preset> [directory] [--output <file>]
 
 Presets:
-  architecture, pitch, briefing, archive, slides
+  architecture, pitch, briefing, archive, slides, progress
     Build one HTML file from source content
   html
     Create an unthemed HTML artifact
@@ -380,84 +380,6 @@ export async function resolveEntry(target: string): Promise<string> {
   return project?.root === absoluteTarget
     ? path.resolve(project.root, project.manifest.entry)
     : path.join(absoluteTarget, "index.html");
-}
-
-const cssFileUrl = /(?:url\(|@import\s+)\s*['"]?\s*file:/i;
-const templateMarker = /\{\{[^}]+\}\}/;
-
-function checkDocumentBasics(entry: string, html: string): void {
-  let fileUrl = false;
-  let unresolvedMarker = false;
-  const nodes: Array<{ node: DefaultTreeAdapterMap["node"]; rawTextTag: string }> = parse(html).childNodes.map(
-    (node) => ({ node, rawTextTag: "" }),
-  );
-  for (const current of nodes) {
-    const { node } = current;
-    if ("tagName" in node) {
-      for (const attribute of node.attrs) {
-        if (
-          urlAttributes.includes(attribute.name) &&
-          URL.canParse(attribute.value, "https://blueprint.invalid") &&
-          new URL(attribute.value, "https://blueprint.invalid").protocol === "file:"
-        ) {
-          fileUrl = true;
-        }
-        if (attribute.name === "style" && cssFileUrl.test(attribute.value)) fileUrl = true;
-        if (templateMarker.test(attribute.value)) unresolvedMarker = true;
-      }
-      const rawTextTag =
-        node.tagName === "script" || node.tagName === "style" ? node.tagName : current.rawTextTag;
-      nodes.push(...node.childNodes.map((child) => ({ node: child, rawTextTag })));
-      if ("content" in node) {
-        nodes.push(...node.content.childNodes.map((child) => ({ node: child, rawTextTag })));
-      }
-    } else if ("value" in node) {
-      if (current.rawTextTag === "style" && cssFileUrl.test(node.value)) fileUrl = true;
-      if (current.rawTextTag !== "script" && templateMarker.test(node.value)) unresolvedMarker = true;
-    }
-  }
-
-  const errors = [
-    !/<html(?:\s|>)/i.test(html) && "missing <html>",
-    !/<head(?:\s|>)/i.test(html) && "missing <head>",
-    !/<body(?:\s|>)/i.test(html) && "missing <body>",
-    unresolvedMarker && "contains unresolved template markers",
-    fileUrl && "contains file:// URLs",
-  ].filter(Boolean);
-
-  if (errors.length > 0) throw new Error(`${entry}: ${errors.join(", ")}`);
-}
-
-async function checkPresetOutput(
-  preset: ProjectPreset,
-  entry: string,
-  html: string,
-  projectRoot: string,
-): Promise<void> {
-  switch (preset) {
-    case "architecture": {
-      const sourceFile = path.join(projectRoot, "src", "diagram.svg");
-      checkArchitectureOutput(html, entry, { filename: sourceFile, raw: await readFile(sourceFile, "utf8") });
-      return;
-    }
-    case "pitch":
-      checkPitchOutput(html, entry);
-      return;
-    case "briefing":
-      checkBriefingOutput(html, entry);
-      return;
-    case "archive":
-      checkArchiveOutput(html, entry);
-      return;
-    case "slides":
-      checkSlidesOutput(html, entry);
-      return;
-    case "prototype-lite":
-    case "prototype-full":
-    case "dossier":
-      await checkScaffoldOutput(html, entry, preset, projectRoot);
-      return;
-  }
 }
 
 async function checkCreatedEntry(entry: string, preset: ProjectPreset, projectRoot: string): Promise<void> {
@@ -822,6 +744,7 @@ export async function main(argv: string[]): Promise<number> {
       args.preset === "archive" ||
       args.preset === "briefing" ||
       args.preset === "slides" ||
+      args.preset === "progress" ||
       args.preset === "prototype-lite" ||
       args.preset === "prototype-full" ||
       args.preset === "dossier"
@@ -840,6 +763,9 @@ export async function main(argv: string[]): Promise<number> {
     } else if (args.preset === "briefing") {
       preset = args.preset;
       entry = await createBriefing(target, args.output);
+    } else if (args.preset === "progress") {
+      preset = args.preset;
+      entry = await createProgress(target, args.output);
     } else if (args.preset === "slides") {
       preset = args.preset;
       entry = await createSlides(target, args.output);
