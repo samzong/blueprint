@@ -48,6 +48,15 @@ test("installs a runnable package with every preset and the bundled skill", { ti
     await exec(executable, ["check", project], { cwd: scratch });
   }
 
+  const progressProject = path.join(scratch, "progress");
+  await exec(executable, ["create", "progress", progressProject], { cwd: scratch });
+  const progressSource = path.join(progressProject, "src", "progress.json");
+  const progressConfig = JSON.parse(await readFile(progressSource, "utf8"));
+  progressConfig.goal = "Verify the installed package compiles changed JSON.";
+  await writeFile(progressSource, JSON.stringify(progressConfig));
+  await exec(executable, ["check", progressProject], { cwd: scratch });
+  assert.match(await readFile(path.join(progressProject, "index.html"), "utf8"), /Verify the installed package compiles changed JSON\./);
+
   const architectureProject = path.join(scratch, "architecture");
   await exec(executable, ["export", architectureProject, "--format", "svg"], { cwd: scratch });
   await exec(executable, ["export", architectureProject, "--format", "png"], { cwd: scratch });
@@ -67,10 +76,10 @@ test("installs a runnable package with every preset and the bundled skill", { ti
 
   const { stdout: listOutput } = await exec(executable, ["list", "--root", scratch, "--json"], { cwd: scratch });
   const projects: Array<{ name: string; preset: string }> = JSON.parse(listOutput);
-  assert.equal(projects.length, 9);
+  assert.equal(projects.length, 10);
   assert.deepEqual(
     projects.map((project) => project.preset).sort(),
-    ["architecture", "archive", "briefing", "dossier", "html", "pitch", "prototype-full", "prototype-lite", "slides"],
+    ["architecture", "archive", "briefing", "dossier", "html", "pitch", "progress", "prototype-full", "prototype-lite", "slides"],
   );
 
   const installHome = path.join(scratch, "home");

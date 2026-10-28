@@ -35,6 +35,7 @@ flowchart TB
     Artifact["Managed Artifact<br/>entry · inline SVG · chrome/runtime"]:::artifact
     ProjectMeta[".blueprint.json<br/>identity · preset · createdWith<br/>deployment record · protection"]:::artifact
     Html["Unthemed html Artifact<br/>agent-owned HTML · CSS · JS · local assets<br/>existing lifecycle · no injected chrome"]:::artifact
+    Progress["Progress Preset<br/>agent-owned progress.json · derived owner views<br/>compiler-owned labels · shared tokens · native disclosures"]:::artifact
     Portable["Portable architecture exports<br/>SVG · PNG"]:::artifact
 
     Preview["Local preview<br/>gofs or Vite"]:::external
@@ -55,6 +56,9 @@ flowchart TB
     Validator --> Catalog
     Sources -->|"input"| Compiler
     Compiler -->|"wraps / compiles"| Artifact
+    Skill -->|"writes JSON only"| Progress
+    Commands -->|"create · check recompiles"| Progress
+    Progress -->|"portable HTML"| Artifact
     Artifact -->|"export"| Portable
     Validator --> Artifact
     Manifest --> ProjectMeta

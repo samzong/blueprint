@@ -2,7 +2,7 @@
 name: blueprint
 description: >
   Create, upgrade, rebuild, validate, preview, discover, export, and deploy blueprint-managed
-  Artifacts using html, architecture, pitch, briefing, slides, archive, prototype, or dossier presets.
+  Artifacts using html, architecture, pitch, briefing, slides, archive, progress, prototype, or dossier presets.
   Use when the user mentions blueprint, asks to create a page, demo, deck,
   report, chart, dashboard, architecture diagram, or Markdown archive, or wants to upgrade, check, preview, export, list, or
   publish an existing blueprint project. Do not use for unrelated websites or
@@ -45,6 +45,9 @@ Ask at most one blocking question and only for missing information that changes 
 | Research, comparison, diligence, white paper | `dossier` |
 | Responsibility, process, governance, training, internal alignment | `briefing` |
 | Markdown library, knowledge base, searchable document set | `archive` |
+| Owner explicitly requests a progress or status page for a long task or multiple agent sessions | `progress` |
+
+Create a `progress` Artifact only when the owner explicitly requests that page. Do not create one by default for every task.
 
 Route ordinary agent-authored standalone HTML to `html`. Choose content, layout, CSS, and optional JavaScript independently. Do not load design-system or Theme references for `html`. Use another themed workflow when explicitly selected; preserve the existing Preset for managed Artifacts.
 
@@ -74,6 +77,7 @@ When rebuilding a legacy page or time-sensitive product story:
 | Preset | References |
 |---|---|
 | `html` | None |
+| `progress` | [design system](references/design-system.md), [progress contract](references/preset-progress.md) |
 | `architecture` | [diagram direction](references/architecture-diagrams.md), [architecture contract](references/preset-architecture.md) |
 | `pitch` | [design system](references/design-system.md), [pitch contract](references/preset-pitch.md) |
 | `briefing` | [design system](references/design-system.md), [briefing theme](references/theme-briefing.md), [briefing contract](references/preset-briefing.md) |
@@ -96,8 +100,9 @@ When an Artifact contains charts, read [chart method](references/chart-method.md
    ```
 
 4. For `html`, run `blueprint create html <output>` first, then directly author `<output>/index.html` and run `blueprint check <output>`. Keep the stable directory and CLI-owned manifest. Author local images, CSS, JavaScript, and data in any layout under the Artifact directory. No framework bootstrap is required. Keep private working notes under `.local/` or outside the Artifact; dotfiles and hidden directories are not published, and symbolic links are rejected. Repeating create checks and preserves existing HTML.
-5. For `prototype-lite`, `prototype-full`, or `dossier`, run `blueprint create <preset> <output>` before filling topic-specific content.
-6. For `architecture`, render and inspect the PNG before returning the review path. For other Presets, return the output path and the appropriate preview command. Do not install dependencies or start a server unless the user requested preview or deployment.
+5. For `progress`, run `blueprint create progress <output>`, edit only `src/progress.json`, then run `blueprint check <output>`. The CLI compiles the compact owner page with a segmented progress bar, three status columns, and native disclosures.
+6. For `prototype-lite`, `prototype-full`, or `dossier`, run `blueprint create <preset> <output>` before filling topic-specific content.
+7. For `architecture`, render and inspect the PNG before returning the review path. For other Presets, return the output path and the appropriate preview command. Do not install dependencies or start a server unless the user requested preview or deployment.
 
 Let `blueprint create` own the `.blueprint.json` schema and initial manifest. Never create, copy, delete, add, remove, or rename manifest fields. During a verified upgrade, the Agent may update only the existing `createdWith` value.
 
@@ -153,6 +158,6 @@ Omit `--account` by default. Let the CLI resolve the recorded account, `CLOUDFLA
 - Do not run `git init`, install dependencies, or start a server unless required by the requested operation.
 - Do not add unrequested documentation, linters, formatters, hooks, state libraries, or UI frameworks.
 - Do not write narration comments.
-- Preview only the compiled root `index.html` for `architecture`, `pitch`, `briefing`, `slides`, and `archive`.
+- Preview only the compiled root `index.html` for `architecture`, `pitch`, `briefing`, `slides`, `archive`, and `progress`.
 - Do not recreate compiler-owned navigation, progress, responsive behavior, deck chrome, language controls, or runtime in semantic sources. Architecture SVG sources own their drawing styles.
 - Do not add CTA, contact, or approval slides to `briefing` unless explicitly requested.

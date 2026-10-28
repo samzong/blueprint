@@ -11,6 +11,7 @@ export type ProjectPreset =
   | "dossier"
   | "html"
   | "pitch"
+  | "progress"
   | "prototype-full"
   | "prototype-lite"
   | "slides";
@@ -53,6 +54,7 @@ const presets = new Set<ProjectPreset>([
   "dossier",
   "html",
   "pitch",
+  "progress",
   "prototype-full",
   "prototype-lite",
   "slides",

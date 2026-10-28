@@ -10,6 +10,7 @@ const assets = [
   "presets/archive-runtime.js",
   "presets/briefing.css",
   "presets/pitch.css",
+  "presets/progress.css",
   "presets/slides-dify-x.css",
   "shared/deck.css",
   "shared/deck.js",

@@ -55,6 +55,7 @@ Available presets:
 | `pitch`          | Compiled single-file story                                                                        | No named Theme; shared design system and fixed Preset baseline        |
 | `briefing`       | Compiled single-file slide deck                                                                   | Fixed `briefing` Theme                                                |
 | `slides`         | Compiled single-file Reveal.js presentation with optional brand/language chrome and speaker notes | Configured `dify-x` Theme; currently the only supported value         |
+| `progress`       | Compiled owner status page from one JSON source | Shared design system; fixed desktop layout |
 | `archive`        | Compiled searchable Markdown reader                                                               | Fixed `win98-web` Theme                                               |
 | `prototype-lite` | Single-file React prototype                                                                       | No named Theme; Artifact-specific styling on the shared design system |
 | `prototype-full` | Vite + React + TypeScript prototype                                                               | No named Theme; Artifact-specific styling on the shared design system |
@@ -66,6 +67,10 @@ A Preset is the Artifact contract, not a visual style. Architecture diagrams are
 For charts in any Artifact, the bundled [chart method](skill/blueprint/references/chart-method.md) covers form, stable identity, ordered/status encodings, non-color alternatives, and rendered acceptance. Copyable light/dark defaults stay author-owned; no Theme or scaffold assets are added. `blueprint palette check '#243078,#c07818,#1890f0,#903018,#606090' --mode light --json` screens all categorical pairs using OKLab and Machado CVD simulations plus surface contrast. Use `--kind sequential|diverging|status|mark|text` and `--surface '#hex'` for the actual role and surface. FAIL exits nonzero, including required compensation. PASS certifies only this numeric policy, not a chart's accessibility or visual quality; `blueprint check` is unchanged.
 
 For free-form HTML, run `blueprint create html .local/report`, author the page and its local assets, then use the existing `check`, `preview`, and `deploy` commands. No Theme, font, chrome, or framework is injected. Repeating create preserves content and identity. The Artifact directory is the site's document root; deployment preserves relative paths, excludes dotfiles and hidden directories, and rejects symbolic links. Keep private working notes under `.local/` or outside the Artifact.
+
+Use `progress` only when the owner requests a status page for a long or multi-session task. Run `blueprint create progress .local/task-progress`. Edit only `src/progress.json`. Run `blueprint check .local/task-progress`.
+
+The compiler derives phase progress and three status columns from the same items. A segmented progress bar and compact decision rows sit above the columns. Completed work and item results use native disclosures. The fixed desktop layout uses the shared design system. See the [progress contract](skill/blueprint/references/preset-progress.md).
 
 For architecture work, ask the Agent to draw the diagram. It inspects the project and directly authors the complete `src/diagram.svg`; Blueprint validates it, wraps it in an HTML review surface, and exports that same drawing as SVG or PNG. You do not provide nodes, coordinates, or layout JSON.
 

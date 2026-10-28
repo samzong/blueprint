@@ -15,15 +15,17 @@ import {
 } from "@kitup/sdk";
 import { parse, type DefaultTreeAdapterMap } from "parse5";
 
+import { checkPresetOutput } from "./presets/check.ts";
 import { checkPalette, type PaletteKind, type PaletteMode } from "./palette.ts";
 import { deployWorker, maxWorkerNameLength } from "./deploy.ts";
 import { chooseOne, type Choice } from "./interactive.ts";
-import { checkArchitectureOutput, createArchitecture, exportArchitecture } from "./presets/architecture.ts";
-import { checkArchiveOutput, createArchive } from "./presets/archive.ts";
-import { checkBriefingOutput, createBriefing } from "./presets/briefing.ts";
-import { checkPitchOutput, createPitch } from "./presets/pitch.ts";
-import { checkScaffoldOutput, createScaffold } from "./presets/scaffold.ts";
-import { checkSlidesOutput, createSlides } from "./presets/slides.ts";
+import { createArchitecture, exportArchitecture } from "./presets/architecture.ts";
+import { createArchive } from "./presets/archive.ts";
+import { createBriefing } from "./presets/briefing.ts";
+import { createPitch } from "./presets/pitch.ts";
+import { compileProgress, createProgress } from "./presets/progress.ts";
+import { createScaffold } from "./presets/scaffold.ts";
+import { createSlides } from "./presets/slides.ts";
 import { urlAttributes } from "./presets/shared.ts";
 import {
   findProject,
@@ -71,7 +73,7 @@ Commands:
   help [command]                Show help
 
 Presets:
-  architecture, pitch, briefing, archive, slides
+  architecture, pitch, briefing, archive, slides, progress
   html, prototype-lite, prototype-full, dossier
 
 Global options:
@@ -99,7 +101,7 @@ PASS means numeric screening only, not accessibility conformance.`,
   blueprint create <preset> [directory] [--output <file>]
 
 Presets:
-  architecture, pitch, briefing, archive, slides
+  architecture, pitch, briefing, archive, slides, progress
     Build one HTML file from source content
   html
     Create an unthemed HTML artifact
@@ -428,38 +430,6 @@ function checkDocumentBasics(entry: string, html: string): void {
   if (errors.length > 0) throw new Error(`${entry}: ${errors.join(", ")}`);
 }
 
-async function checkPresetOutput(
-  preset: ProjectPreset,
-  entry: string,
-  html: string,
-  projectRoot: string,
-): Promise<void> {
-  switch (preset) {
-    case "architecture": {
-      const sourceFile = path.join(projectRoot, "src", "diagram.svg");
-      checkArchitectureOutput(html, entry, { filename: sourceFile, raw: await readFile(sourceFile, "utf8") });
-      return;
-    }
-    case "pitch":
-      checkPitchOutput(html, entry);
-      return;
-    case "briefing":
-      checkBriefingOutput(html, entry);
-      return;
-    case "archive":
-      checkArchiveOutput(html, entry);
-      return;
-    case "slides":
-      checkSlidesOutput(html, entry);
-      return;
-    case "prototype-lite":
-    case "prototype-full":
-    case "dossier":
-      await checkScaffoldOutput(html, entry, preset, projectRoot);
-      return;
-  }
-}
-
 async function checkCreatedEntry(entry: string, preset: ProjectPreset, projectRoot: string): Promise<void> {
   const html = await readFile(entry, "utf8");
   checkDocumentBasics(entry, html);
@@ -469,6 +439,9 @@ async function checkCreatedEntry(entry: string, preset: ProjectPreset, projectRo
 export async function checkEntry(target: string): Promise<string> {
   const targetProject = await findProjectOrNull(target);
   const entry = await resolveEntry(target);
+  if (targetProject?.manifest.preset === "progress" && path.resolve(targetProject.root, targetProject.manifest.entry) === entry) {
+    await compileProgress(targetProject.root, entry);
+  }
   const html = await readFile(entry, "utf8");
   checkDocumentBasics(entry, html);
 
@@ -822,6 +795,7 @@ export async function main(argv: string[]): Promise<number> {
       args.preset === "archive" ||
       args.preset === "briefing" ||
       args.preset === "slides" ||
+      args.preset === "progress" ||
       args.preset === "prototype-lite" ||
       args.preset === "prototype-full" ||
       args.preset === "dossier"
@@ -840,6 +814,9 @@ export async function main(argv: string[]): Promise<number> {
     } else if (args.preset === "briefing") {
       preset = args.preset;
       entry = await createBriefing(target, args.output);
+    } else if (args.preset === "progress") {
+      preset = args.preset;
+      entry = await createProgress(target, args.output);
     } else if (args.preset === "slides") {
       preset = args.preset;
       entry = await createSlides(target, args.output);

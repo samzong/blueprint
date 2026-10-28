@@ -28,6 +28,8 @@ Add shared tokens here only when multiple presets need them. Preset-only values 
 | `accent` | `#2563eb` | Primary action or emphasis |
 | `accent-soft` | `#dbeafe` | Accent surface |
 | `accent-ultra` | `#eff6ff` | Light accent surface |
+| `teal` | `#0f766e` | Complete or healthy status |
+| `orange` | `#c2410c` | Blocked or at-risk status |
 | `highlight` | `#fef08a` | One short inline highlight |
 
 Multi-party comparisons may use four stable slots: teal `#0f766e`, orange `#c2410c`, blue `#2563eb`, and purple `#7c3aed`.
