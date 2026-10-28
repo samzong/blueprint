@@ -68,9 +68,7 @@ For charts in any Artifact, the bundled [chart method](skill/blueprint/reference
 
 For free-form HTML, run `blueprint create html .local/report`, author the page and its local assets, then use the existing `check`, `preview`, and `deploy` commands. No Theme, font, chrome, or framework is injected. Repeating create preserves content and identity. The Artifact directory is the site's document root; deployment preserves relative paths, excludes dotfiles and hidden directories, and rejects symbolic links. Keep private working notes under `.local/` or outside the Artifact.
 
-Use `progress` only when the owner requests a status page for a long or multi-session task. Run `blueprint create progress .local/task-progress`. Edit only `src/progress.json`. Run `blueprint check .local/task-progress`.
-
-The compiler derives phase progress and three status columns from the same items. A segmented progress bar and compact decision rows sit above the columns. Completed work and item results use native disclosures. The fixed desktop layout uses the shared design system. See the [progress contract](skill/blueprint/references/preset-progress.md).
+Create `progress` only when the owner explicitly requests a status page. Run `blueprint create progress <directory>`, then edit only `src/progress.json`. After every item status change or new owner decision, update the JSON and `updated_at`, rerun `blueprint create progress <directory>`, and run `blueprint check <directory>`. A repeated create reads the JSON and preserves project identity. `check` validates but does not compile the page. If check fails, fix the JSON and repeat both commands. The fixed desktop page uses a segmented progress bar, three status columns, and native disclosures. See the [progress contract](skill/blueprint/references/preset-progress.md).
 
 For architecture work, ask the Agent to draw the diagram. It inspects the project and directly authors the complete `src/diagram.svg`; Blueprint validates it, wraps it in an HTML review surface, and exports that same drawing as SVG or PNG. You do not provide nodes, coordinates, or layout JSON.
 

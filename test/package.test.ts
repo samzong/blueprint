@@ -54,6 +54,7 @@ test("installs a runnable package with every preset and the bundled skill", { ti
   const progressConfig = JSON.parse(await readFile(progressSource, "utf8"));
   progressConfig.goal = "Verify the installed package compiles changed JSON.";
   await writeFile(progressSource, JSON.stringify(progressConfig));
+  await exec(executable, ["create", "progress", progressProject], { cwd: scratch });
   await exec(executable, ["check", progressProject], { cwd: scratch });
   assert.match(await readFile(path.join(progressProject, "index.html"), "utf8"), /Verify the installed package compiles changed JSON\./);
 

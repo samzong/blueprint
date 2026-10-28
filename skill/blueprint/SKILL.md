@@ -100,7 +100,7 @@ When an Artifact contains charts, read [chart method](references/chart-method.md
    ```
 
 4. For `html`, run `blueprint create html <output>` first, then directly author `<output>/index.html` and run `blueprint check <output>`. Keep the stable directory and CLI-owned manifest. Author local images, CSS, JavaScript, and data in any layout under the Artifact directory. No framework bootstrap is required. Keep private working notes under `.local/` or outside the Artifact; dotfiles and hidden directories are not published, and symbolic links are rejected. Repeating create checks and preserves existing HTML.
-5. For `progress`, run `blueprint create progress <output>`, edit only `src/progress.json`, then run `blueprint check <output>`. The CLI compiles the compact owner page with a segmented progress bar, three status columns, and native disclosures.
+5. For `progress`, run `blueprint create progress <output>`, then edit only `src/progress.json`. After every item status change or new owner decision, update the JSON and `updated_at`, then rerun `blueprint create progress <output>` and `blueprint check <output>`. The repeated create reads the JSON and preserves project identity. `check` validates but does not compile the page. If check fails, fix the JSON and repeat both commands.
 6. For `prototype-lite`, `prototype-full`, or `dossier`, run `blueprint create <preset> <output>` before filling topic-specific content.
 7. For `architecture`, render and inspect the PNG before returning the review path. For other Presets, return the output path and the appropriate preview command. Do not install dependencies or start a server unless the user requested preview or deployment.
 

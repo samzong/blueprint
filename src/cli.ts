@@ -13,9 +13,8 @@ import {
   runBundledSkillInstall,
   type InstallFlagValues,
 } from "@kitup/sdk";
-import { parse, type DefaultTreeAdapterMap } from "parse5";
 
-import { checkPresetOutput } from "./presets/check.ts";
+import { checkDocumentBasics, checkPresetOutput } from "./presets/check.ts";
 import { checkPalette, type PaletteKind, type PaletteMode } from "./palette.ts";
 import { deployWorker, maxWorkerNameLength } from "./deploy.ts";
 import { chooseOne, type Choice } from "./interactive.ts";
@@ -23,10 +22,9 @@ import { createArchitecture, exportArchitecture } from "./presets/architecture.t
 import { createArchive } from "./presets/archive.ts";
 import { createBriefing } from "./presets/briefing.ts";
 import { createPitch } from "./presets/pitch.ts";
-import { compileProgress, createProgress } from "./presets/progress.ts";
+import { createProgress } from "./presets/progress.ts";
 import { createScaffold } from "./presets/scaffold.ts";
 import { createSlides } from "./presets/slides.ts";
-import { urlAttributes } from "./presets/shared.ts";
 import {
   findProject,
   findProjectOrNull,
@@ -384,52 +382,6 @@ export async function resolveEntry(target: string): Promise<string> {
     : path.join(absoluteTarget, "index.html");
 }
 
-const cssFileUrl = /(?:url\(|@import\s+)\s*['"]?\s*file:/i;
-const templateMarker = /\{\{[^}]+\}\}/;
-
-function checkDocumentBasics(entry: string, html: string): void {
-  let fileUrl = false;
-  let unresolvedMarker = false;
-  const nodes: Array<{ node: DefaultTreeAdapterMap["node"]; rawTextTag: string }> = parse(html).childNodes.map(
-    (node) => ({ node, rawTextTag: "" }),
-  );
-  for (const current of nodes) {
-    const { node } = current;
-    if ("tagName" in node) {
-      for (const attribute of node.attrs) {
-        if (
-          urlAttributes.includes(attribute.name) &&
-          URL.canParse(attribute.value, "https://blueprint.invalid") &&
-          new URL(attribute.value, "https://blueprint.invalid").protocol === "file:"
-        ) {
-          fileUrl = true;
-        }
-        if (attribute.name === "style" && cssFileUrl.test(attribute.value)) fileUrl = true;
-        if (templateMarker.test(attribute.value)) unresolvedMarker = true;
-      }
-      const rawTextTag =
-        node.tagName === "script" || node.tagName === "style" ? node.tagName : current.rawTextTag;
-      nodes.push(...node.childNodes.map((child) => ({ node: child, rawTextTag })));
-      if ("content" in node) {
-        nodes.push(...node.content.childNodes.map((child) => ({ node: child, rawTextTag })));
-      }
-    } else if ("value" in node) {
-      if (current.rawTextTag === "style" && cssFileUrl.test(node.value)) fileUrl = true;
-      if (current.rawTextTag !== "script" && templateMarker.test(node.value)) unresolvedMarker = true;
-    }
-  }
-
-  const errors = [
-    !/<html(?:\s|>)/i.test(html) && "missing <html>",
-    !/<head(?:\s|>)/i.test(html) && "missing <head>",
-    !/<body(?:\s|>)/i.test(html) && "missing <body>",
-    unresolvedMarker && "contains unresolved template markers",
-    fileUrl && "contains file:// URLs",
-  ].filter(Boolean);
-
-  if (errors.length > 0) throw new Error(`${entry}: ${errors.join(", ")}`);
-}
-
 async function checkCreatedEntry(entry: string, preset: ProjectPreset, projectRoot: string): Promise<void> {
   const html = await readFile(entry, "utf8");
   checkDocumentBasics(entry, html);
@@ -439,9 +391,6 @@ async function checkCreatedEntry(entry: string, preset: ProjectPreset, projectRo
 export async function checkEntry(target: string): Promise<string> {
   const targetProject = await findProjectOrNull(target);
   const entry = await resolveEntry(target);
-  if (targetProject?.manifest.preset === "progress" && path.resolve(targetProject.root, targetProject.manifest.entry) === entry) {
-    await compileProgress(targetProject.root, entry);
-  }
   const html = await readFile(entry, "utf8");
   checkDocumentBasics(entry, html);
 

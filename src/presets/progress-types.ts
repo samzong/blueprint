@@ -12,8 +12,6 @@ export type ProgressItem = {
   result: string;
   links: ProgressLink[];
   session?: string;
-  operation?: string;
-  owner?: string;
 };
 
 export type ProgressPhase = {
