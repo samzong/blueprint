@@ -24,7 +24,7 @@ aside {
   border-right: 2px ridge #fff;
   background: #e0e0e0;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr);
 }
 
 .brand {
@@ -42,9 +42,64 @@ aside {
   font-size: 13px;
 }
 
+.brand-source a {
+  color: #0000ee;
+}
+
 .filter {
   padding: 8px;
   border-bottom: 2px ridge #fff;
+}
+
+.agent {
+  padding: 8px;
+  border-bottom: 2px ridge #fff;
+}
+
+.agent-title {
+  display: block;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 0.06em;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  list-style: none;
+  pointer-events: none;
+}
+
+.agent-title::-webkit-details-marker {
+  display: none;
+}
+
+.agent-button {
+  width: 100%;
+  border: 2px outset #fff;
+  background: #d8d8d8;
+  color: #000;
+  cursor: pointer;
+  display: block;
+  font-family: inherit;
+  font-size: 13px;
+  margin-bottom: 5px;
+  padding: 3px;
+  text-align: center;
+}
+
+.agent-button:active {
+  border-style: inset;
+}
+
+.agent-links {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  margin: 0;
+  font-size: 12px;
+}
+
+.agent-links a {
+  color: #0000ee;
 }
 
 .download-button {
@@ -73,6 +128,7 @@ aside {
   font-size: 14px;
 }
 
+summary:focus-visible,
 button:focus-visible,
 input:focus-visible {
   outline: 2px solid #000080;
@@ -82,6 +138,27 @@ input:focus-visible {
 nav {
   overflow: auto;
   padding: 6px;
+}
+
+.doc-group {
+  margin-bottom: 5px;
+}
+
+.doc-group-label {
+  border: 2px outset #fff;
+  background: #d0d0d0;
+  cursor: pointer;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 3px 5px;
+  word-break: break-all;
+}
+
+.doc-group-body {
+  border-left: 2px groove #fff;
+  margin: 4px 0 4px 3px;
+  padding-left: 6px;
 }
 
 .doc-button {
@@ -123,6 +200,10 @@ article {
   color: #555;
   font-size: 13px;
   margin: 0 0 12px;
+}
+
+.meta a {
+  color: #0000ee;
 }
 
 .content {
@@ -228,7 +309,33 @@ article {
     position: relative;
   }
 
+  .agent {
+    padding: 0;
+  }
+
+  .agent-title {
+    display: list-item;
+    cursor: pointer;
+    list-style: disclosure-closed inside;
+    margin: 0;
+    padding: 8px;
+    pointer-events: auto;
+  }
+
+  .agent[open] > .agent-title {
+    list-style-type: disclosure-open;
+  }
+
+  .agent-title::-webkit-details-marker {
+    display: inline;
+  }
+
+  .agent-controls {
+    padding: 0 8px 8px;
+  }
+
   .download-button,
+  .agent-button,
   .filter input,
   .doc-button {
     min-height: 44px;

@@ -6,6 +6,7 @@ import test from "node:test";
 
 import { checkEntry, main } from "../src/cli.ts";
 import { deployWorker } from "../src/deploy.ts";
+import { createArchive } from "../src/presets/archive.ts";
 import { createPitch } from "../src/presets/pitch.ts";
 import { createScaffold } from "../src/presets/scaffold.ts";
 import { createSlides } from "../src/presets/slides.ts";
@@ -123,6 +124,18 @@ if (args[0] === "--version") {
     assert.equal(await readFile(path.join(artifact, ".blueprint.json"), "utf8"), oversizedManifest);
     await rm(repository, { recursive: true });
 
+    for (const file of ["llms.txt", "llms-full.txt"]) {
+      await writeFile(path.join(directory, file), "unrelated neighboring content");
+    }
+    const archive = path.join(directory, "archive");
+    await cp(new URL("fixtures/archive", import.meta.url), archive, { recursive: true });
+    const archiveEntry = await createArchive(archive);
+    await recordProject(archive, "archive", archiveEntry, "0.1.0");
+    assert.equal(await main(["deploy", archiveEntry, "--name", "blueprint-archive"]), 0);
+    assert.deepEqual(JSON.parse(await readFile(log, "utf8")).files,
+      ["index.html", "llms-full.txt", "llms.txt"]);
+    await rm(archive, { recursive: true });
+
     const result = await deployWorker(entry, await checkEntry(entry), { name: "blueprint-demo" });
     const deployment: { account: string; args: string[]; cwd: string; files: string[] } = JSON.parse(
       await readFile(log, "utf8"),
@@ -234,6 +247,9 @@ if (args[0] === "--version") {
     await mkdir(path.dirname(slidesProject), { recursive: true });
     await cp(path.resolve("test/fixtures/slides"), slidesProject, { recursive: true });
     const slidesEntry = await createSlides(slidesProject);
+    for (const file of ["llms.txt", "llms-full.txt"]) {
+      await writeFile(path.join(slidesProject, file), "unrelated neighboring content");
+    }
     await recordProject(slidesProject, "slides", slidesEntry, "0.1.0");
     assert.equal(await main(["deploy", slidesProject, "--name", "blueprint-slides"]), 0);
     const slidesDeployment: { files: string[] } = JSON.parse(await readFile(log, "utf8"));
