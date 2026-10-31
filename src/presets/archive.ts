@@ -7,6 +7,7 @@ import { escapeHtml, language, optionalFile, parseObject, requiredString } from 
 type ArchiveConfig = {
   downloadName: string;
   lang: string;
+  sourceUrl: string;
   title: string;
 };
 
@@ -15,6 +16,14 @@ type ArchiveDocument = {
   path: string;
   title: string;
 };
+
+function parseSourceUrl(value: unknown, filename: string): string {
+  if (value === undefined) return "";
+  if (typeof value !== "string" || !/^https?:\/\/[^\s]+$/i.test(value)) {
+    throw new Error(`${filename}: sourceUrl must be an http(s) URL`);
+  }
+  return value.endsWith("/") ? value : `${value}/`;
+}
 
 function parseConfig(raw: string, filename: string, projectDirectory: string): ArchiveConfig {
   const config = parseObject(raw, filename);
@@ -30,6 +39,7 @@ function parseConfig(raw: string, filename: string, projectDirectory: string): A
   return {
     downloadName,
     lang: language(config, filename),
+    sourceUrl: parseSourceUrl(config.sourceUrl, filename),
     title: requiredString(config, "title", filename),
   };
 }
@@ -77,7 +87,54 @@ function scriptJson(value: unknown): string {
   return JSON.stringify(value).replaceAll("<", "\\u003c").replaceAll("\u2028", "\\u2028").replaceAll("\u2029", "\\u2029");
 }
 
-const archiveRequiredIds = ["docs", "content", "meta", "filter", "download", "doc-count"] as const;
+const archiveRequiredIds = [
+  "docs",
+  "content",
+  "meta",
+  "filter",
+  "download",
+  "doc-count",
+  "agent",
+  "copy-doc",
+  "copy-agent-url",
+  "llms-index",
+  "llms-full",
+] as const;
+
+function agentDocuments(config: ArchiveConfig, documents: ArchiveDocument[]): {
+  full: string;
+  index: string;
+} {
+  const header = [
+    `> ${documents.length} documents`,
+    config.sourceUrl ? `> Source: ${config.sourceUrl}` : "",
+  ].filter(Boolean);
+  const documentUrl = (archiveDocument: ArchiveDocument) =>
+    config.sourceUrl
+      ? `${config.sourceUrl}${archiveDocument.path.split("/").map(encodeURIComponent).join("/")}`
+      : "";
+  const entries = documents.map((archiveDocument) => {
+    const url = documentUrl(archiveDocument);
+    return `- \`${archiveDocument.path}\` — ${archiveDocument.title}${url ? ` — ${url}` : ""}`;
+  });
+  const index = [
+    `# ${config.title}`,
+    "",
+    ...header,
+    "",
+    "## Documents",
+    "",
+    ...entries,
+    "",
+  ].join("\n");
+  const sections = documents.map((archiveDocument) => {
+    const url = documentUrl(archiveDocument);
+    const about = [`path: ${archiveDocument.path}`, url ? `source: ${url}` : ""].filter(Boolean).join("\n");
+    return `=== ${archiveDocument.path} · ${archiveDocument.title} ===\n${about}\n\n${archiveDocument.content.trimEnd()}\n`;
+  });
+  const full = [`# ${config.title}`, "", ...header, "", ...sections].join("\n");
+  return { full, index };
+}
 
 export function checkArchiveOutput(html: string, filename: string): void {
   if (!/\bconst\s+ARCHIVE\s*=/.test(html)) {
@@ -88,7 +145,7 @@ export function checkArchiveOutput(html: string, filename: string): void {
   }
   for (const id of archiveRequiredIds) {
     const marker = new RegExp(`\\bid=(["'])${id}\\1`, "i");
-    if (!marker.test(html)) throw new Error(`${filename}: missing #${id}`);
+    if (!marker.test(html)) throw new Error(`${filename}: missing #${id}. Rebuild this archive with blueprint create archive <project>, or upgrade it with the Blueprint Skill.`);
   }
 }
 
@@ -121,12 +178,21 @@ export async function createArchive(project: string, output?: string): Promise<s
   const labels = config.lang.toLowerCase().startsWith("zh")
     ? archiveZhCNLabels(documents.length)
     : {
+        copied: "Copied",
+        copyAgentUrl: "Copy agent URL",
+        copyDoc: "Copy Markdown",
+        copyFailed: "Copy failed",
         count: `${documents.length} documents`,
         download: "Download all",
         empty: "No matching documents",
         search: "Search documents",
+        source: "Original",
       };
+  const agent = agentDocuments(config, documents);
   const payload = scriptJson({ ...config, documents, labels });
+  const sourceNote = config.sourceUrl
+    ? `<p class="brand-source"><a href="${escapeHtml(config.sourceUrl)}" target="_blank" rel="noreferrer">${labels.source} ↗</a></p>`
+    : "";
   const document = `<!doctype html>
 <html lang="${escapeHtml(config.lang)}">
 <head>
@@ -144,11 +210,20 @@ ${customCss.trim()}
     <header class="brand">
       <h1>${escapeHtml(config.title)}</h1>
       <p id="doc-count"></p>
+      ${sourceNote}
     </header>
     <div class="filter">
       <button class="download-button" id="download" type="button">${labels.download}</button>
       <input id="filter" type="search" placeholder="${labels.search}" autocomplete="off">
     </div>
+    <details class="agent" id="agent" open>
+      <summary class="agent-title">Agent</summary>
+      <div class="agent-controls">
+        <button class="agent-button" id="copy-doc" type="button">${labels.copyDoc}</button>
+        <button class="agent-button" id="copy-agent-url" type="button">${labels.copyAgentUrl}</button>
+        <p class="agent-links"><a id="llms-index" href="llms.txt">llms.txt</a><a id="llms-full" href="llms-full.txt">llms-full.txt</a></p>
+      </div>
+    </details>
     <nav id="docs"></nav>
   </aside>
   <main>
@@ -169,5 +244,7 @@ ${archiveRuntime.trim()}
   const outputFile = path.resolve(output ?? path.join(projectDirectory, "index.html"));
   await mkdir(path.dirname(outputFile), { recursive: true });
   await writeFile(outputFile, document);
+  await writeFile(path.join(path.dirname(outputFile), "llms.txt"), agent.index);
+  await writeFile(path.join(path.dirname(outputFile), "llms-full.txt"), agent.full);
   return outputFile;
 }

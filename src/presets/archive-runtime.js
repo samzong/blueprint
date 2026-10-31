@@ -28,7 +28,15 @@ const metaEl = requireElement("meta");
 const filterEl = requireInput("filter");
 const countEl = requireElement("doc-count");
 const downloadEl = requireElement("download");
+const copyDocEl = requireElement("copy-doc");
+const copyAgentEl = requireElement("copy-agent-url");
+const llmsIndexEl = requireElement("llms-index");
+const llmsFullEl = requireElement("llms-full");
+const agentEl = requireElement("agent");
+const narrowScreen = window.matchMedia("(max-width: 820px)");
 const crcTable = new Uint32Array(256);
+const collapsedGroups = new Set();
+const docTree = buildTree(documents);
 let activePath = docPathFromLocation();
 /** @type {MermaidModule | null} */
 let mermaidModule = null;
@@ -423,12 +431,11 @@ async function renderMermaidDiagrams() {
 
 function renderNav() {
   const query = filterEl.value.trim().toLowerCase();
-  const visible = documents.filter((archiveDocument) =>
-    `${archiveDocument.path} ${archiveDocument.title}`.toLowerCase().includes(query),
-  );
+  const nodes = query ? pruneTree(docTree, query) : docTree;
+  const filtering = query !== "";
   docsEl.replaceChildren();
 
-  if (visible.length === 0) {
+  if (nodes.length === 0) {
     const empty = document.createElement("div");
     empty.className = "empty";
     empty.textContent = ARCHIVE.labels.empty;
@@ -436,14 +443,131 @@ function renderNav() {
     return;
   }
 
-  for (const archiveDocument of visible) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "doc-button";
-    button.setAttribute("aria-current", archiveDocument.path === activePath ? "true" : "false");
-    button.textContent = archiveDocument.title;
-    button.addEventListener("click", () => loadDoc(archiveDocument.path, false));
-    docsEl.append(button);
+  renderTree(nodes, docsEl, filtering);
+}
+
+/**
+ * @param {ArchiveDocument[]} list
+ * @returns {TreeNode[]}
+ */
+function buildTree(list) {
+  /** @type {TreeNode[]} */
+  const root = [];
+  /** @type {Map<string, DirectoryNode>} */
+  const groups = new Map();
+
+  for (const archiveDocument of list) {
+    const parts = archiveDocument.path.split("/");
+    let siblings = root;
+    let prefix = "";
+    for (const segment of parts.slice(0, -1)) {
+      prefix = prefix ? `${prefix}/${segment}` : segment;
+      let group = groups.get(prefix);
+      if (!group) {
+        group = { kind: "directory", label: segment, path: prefix, children: [] };
+        groups.set(prefix, group);
+        siblings.push(group);
+      }
+      siblings = group.children;
+    }
+    siblings.push({ kind: "document", document: archiveDocument });
+  }
+
+  /** @param {TreeNode[]} nodes */
+  const order = (nodes) => {
+    nodes.sort((left, right) =>
+      left.kind === right.kind ? 0 : left.kind === "document" ? -1 : 1,
+    );
+    for (const node of nodes) {
+      if (node.kind === "directory") order(node.children);
+    }
+  };
+  order(root);
+  return root;
+}
+
+/**
+ * @param {TreeNode[]} nodes
+ * @param {string} query
+ * @returns {TreeNode[]}
+ */
+function pruneTree(nodes, query) {
+  /** @type {TreeNode[]} */
+  const kept = [];
+  for (const node of nodes) {
+    if (node.kind === "document") {
+      if (`${node.document.path} ${node.document.title}`.toLowerCase().includes(query)) kept.push(node);
+      continue;
+    }
+    const children = pruneTree(node.children, query);
+    if (children.length > 0) kept.push({ ...node, children });
+  }
+  return kept;
+}
+
+/**
+ * @param {TreeNode[]} nodes
+ * @param {HTMLElement} container
+ * @param {boolean} filtering
+ */
+function renderTree(nodes, container, filtering) {
+  for (const node of nodes) {
+    if (node.kind === "document") {
+      const archiveDocument = node.document;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "doc-button";
+      button.setAttribute("aria-current", archiveDocument.path === activePath ? "true" : "false");
+      button.textContent = archiveDocument.title;
+      button.title = archiveDocument.path;
+      button.addEventListener("click", () => loadDoc(archiveDocument.path, false));
+      container.append(button);
+      continue;
+    }
+    const group = document.createElement("details");
+    group.className = "doc-group";
+    group.open = filtering || !collapsedGroups.has(node.path);
+    group.addEventListener("toggle", () => {
+      if (filtering || !group.isConnected) return;
+      if (group.open) collapsedGroups.delete(node.path);
+      else collapsedGroups.add(node.path);
+    });
+    const summary = document.createElement("summary");
+    summary.className = "doc-group-label";
+    summary.textContent = node.label;
+    summary.title = node.path;
+    group.append(summary);
+    const body = document.createElement("div");
+    body.className = "doc-group-body";
+    renderTree(node.children, body, filtering);
+    group.append(body);
+    container.append(group);
+  }
+}
+
+/**
+ * @param {HTMLElement} button
+ * @param {string} message
+ */
+function flashLabel(button, message) {
+  const original = button.dataset.label ?? button.textContent ?? "";
+  button.dataset.label = original;
+  button.textContent = message;
+  setTimeout(() => {
+    button.textContent = original;
+  }, 1400);
+}
+
+/**
+ * @param {string} text
+ * @param {HTMLElement} button
+ */
+async function copyText(text, button) {
+  try {
+    await navigator.clipboard.writeText(text);
+    flashLabel(button, ARCHIVE.labels.copied);
+  } catch {
+    flashLabel(button, ARCHIVE.labels.copyFailed);
   }
 }
 
@@ -455,16 +579,56 @@ async function loadDoc(documentPath, replaceUrl) {
   const archiveDocument = documentsByPath.get(documentPath) ?? documents[0];
   activePath = archiveDocument.path;
   updateLocation(archiveDocument.path, replaceUrl);
-  metaEl.textContent = archiveDocument.path;
+  renderMeta(archiveDocument);
   contentEl.innerHTML = markdownToHtml(archiveDocument.content);
   document.title = `${archiveDocument.title} · ${ARCHIVE.title}`;
   renderNav();
   await renderMermaidDiagrams();
 }
 
+/**
+ * @param {ArchiveDocument} archiveDocument
+ */
+function renderMeta(archiveDocument) {
+  metaEl.replaceChildren();
+  const pathLabel = document.createElement("span");
+  pathLabel.textContent = archiveDocument.path;
+  metaEl.append(pathLabel);
+  const url = ARCHIVE.sourceUrl
+    ? `${ARCHIVE.sourceUrl}${archiveDocument.path.split("/").map(encodeURIComponent).join("/")}`
+    : "";
+  if (!url) return;
+  const separator = document.createElement("span");
+  separator.className = "meta-separator";
+  separator.textContent = " · ";
+  const source = document.createElement("a");
+  source.href = url;
+  source.target = "_blank";
+  source.rel = "noreferrer";
+  source.className = "source-link";
+  source.textContent = `${ARCHIVE.labels.source} ↗`;
+  metaEl.append(separator, source);
+}
+
+function syncAgentDisclosure() {
+  agentEl.toggleAttribute("open", !narrowScreen.matches);
+  agentEl.querySelector("summary")?.setAttribute("tabindex", narrowScreen.matches ? "0" : "-1");
+}
+
+narrowScreen.addEventListener("change", syncAgentDisclosure);
+syncAgentDisclosure();
+
 downloadEl.addEventListener("click", downloadAllDocs);
 filterEl.addEventListener("input", renderNav);
 window.addEventListener("hashchange", () => loadDoc(docPathFromLocation(), true));
+llmsIndexEl.setAttribute("href", new URL("llms.txt", location.href).href);
+llmsFullEl.setAttribute("href", new URL("llms-full.txt", location.href).href);
+copyAgentEl.addEventListener("click", () =>
+  copyText(new URL("llms-full.txt", location.href).href, copyAgentEl),
+);
+copyDocEl.addEventListener("click", () =>
+  copyText(documentsByPath.get(activePath)?.content ?? "", copyDocEl),
+);
 
 countEl.textContent = ARCHIVE.labels.count;
 renderNav();

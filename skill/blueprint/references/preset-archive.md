@@ -11,6 +11,8 @@ Use this contract for a searchable, downloadable collection of Markdown document
     style.css          # optional
     docs/**/*.md
   index.html           # generated
+  llms.txt             # generated
+  llms-full.txt        # generated
   .blueprint.json      # managed
 ```
 
@@ -18,16 +20,21 @@ Use this contract for a searchable, downloadable collection of Markdown document
 
 - `lang`: valid language tag; defaults to `en`
 - `downloadName`: ZIP filename; defaults to `<project>.zip`
+- `sourceUrl`: optional http(s) base URL for the original documents, such as a repository blob path. It adds a source link per document and in the sidebar.
 
 The compiler recursively embeds `src/docs`, ignores hidden paths and `node_modules`, places a root `README.md` first, and derives labels from the first H1 or filename. The generated file includes the fixed `win98-web` Theme and compiler-owned renderer and runtime; it must not fetch source documents at runtime.
 The archive chrome follows `lang`: Chinese projects use Chinese search, download, count, and empty-state labels; other languages use the English fallback.
+The compiler also writes `llms.txt` (document index) and `llms-full.txt` (every document concatenated with `=== path · title ===` markers) beside `index.html`. Both are deterministic, contain the Markdown path of each document, and include the source URL when `sourceUrl` is set.
 
 ## Runtime behavior
 
-- Search filters titles and paths immediately.
+- The sidebar groups documents by their `docs/` path segments. Groups are collapsible, keep their state across navigation, and render files before subdirectories at each level.
+- Search filters titles and paths immediately and expands every matching group. Clearing search restores the previous collapsed groups.
 - Hash routes preserve direct links and reloads.
 - ZIP download preserves relative Markdown paths.
 - Mermaid loads only when the active document contains a diagram.
+- The agent block copies the active document as Markdown and copies the absolute `llms-full.txt` URL. It links both agent files with paths resolved from the page location. On narrow screens, the block starts collapsed and opens with one click.
+- A configured `sourceUrl` adds an `Original ↗` link in the document meta line.
 
 ## Build
 

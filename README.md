@@ -56,7 +56,7 @@ Available presets:
 | `briefing`       | Compiled single-file slide deck                                                                   | Fixed `briefing` Theme                                                |
 | `slides`         | Compiled single-file Reveal.js presentation with optional brand/language chrome and speaker notes | Configured `dify-x` Theme; currently the only supported value         |
 | `progress`       | Compiled owner status page from one JSON source | Shared design system; fixed desktop layout |
-| `archive`        | Compiled searchable Markdown reader                                                               | Fixed `win98-web` Theme                                               |
+| `archive`        | Compiled Markdown reader: search, path tree, agent text files, source links                       | Fixed `win98-web` Theme                                               |
 | `prototype-lite` | Single-file React prototype                                                                       | No named Theme; Artifact-specific styling on the shared design system |
 | `prototype-full` | Vite + React + TypeScript prototype                                                               | No named Theme; Artifact-specific styling on the shared design system |
 | `dossier`        | Maintained Vite + React + TypeScript report                                                       | No named Theme; Artifact-specific styling and entity color strategy   |

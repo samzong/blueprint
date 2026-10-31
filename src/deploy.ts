@@ -1,5 +1,6 @@
 import { execFile, spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
+import { existsSync } from "node:fs";
 import { copyFile, cp, lstat, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -239,6 +240,12 @@ export async function deployWorker(
       assets = path.join(temporary, "site");
       await mkdir(assets);
       await copyFile(entry, path.join(assets, "index.html"));
+      if (project?.manifest.preset === "archive") {
+        for (const textFile of ["llms.txt", "llms-full.txt"]) {
+          const source = path.join(path.dirname(entry), textFile);
+          if (existsSync(source)) await copyFile(source, path.join(assets, textFile));
+        }
+      }
     }
 
     const wranglerEnv = {
