@@ -55,7 +55,7 @@ Ask for the primary audience or delivery form only when multiple rows or none ma
 
 For an architecture diagram, use the `architecture` Preset even when the user asks only to “draw a diagram.” Do not ask for nodes, coordinates, colors, or a style selector. Inspect the project, choose the message and composition, and directly author the complete SVG. When a diagram belongs inside another Blueprint Artifact, build and review it as an `architecture` Artifact first, export SVG, then embed the approved SVG in the destination Preset.
 
-An explicit request for slides, PPT, Reveal.js, speaker notes, or stage delivery selects `slides` even when the subject could also fit `pitch` or `briefing`. Choose `prototype-lite` for one page with at most three core interaction states. Choose `prototype-full` for multiple views or sustained iteration. Default to `prototype-lite`. Use the `dify-x` Theme for `slides`; do not ask the user to choose a Theme while it is the only supported slides Theme. `briefing` and `archive` use fixed Themes, so do not ask for a Theme choice.
+An explicit request for slides, PPT, Reveal.js, speaker notes, or stage delivery selects `slides` even when the subject could also fit `pitch` or `briefing`. Choose `prototype-lite` for one page with one bounded review flow. Failure and recovery belong to that flow. Choose `prototype-full` for multiple views or sustained iteration. Default to `prototype-lite`. Use the `dify-x` Theme for `slides`; do not ask the user to choose a Theme while it is the only supported slides Theme. `briefing` and `archive` use fixed Themes, so do not ask for a Theme choice.
 
 For `slides`, inspect the supplied material for real organization, product, partner, event, and language requirements before writing. Configure optional brand chrome only from verified local assets. Configure multiple locales only when requested or supported by source material, keep their slide topology aligned, and write each language for its audience instead of translating line by line. Never invent logos, partners, presenters, translations, citations, or image credits.
 
@@ -76,14 +76,14 @@ When rebuilding a legacy page or time-sensitive product story:
 
 | Preset | References |
 |---|---|
-| `html` | None |
+| `html` | [rendered acceptance](references/rendered-acceptance.md) |
 | `progress` | [design system](references/design-system.md), [progress contract](references/preset-progress.md) |
 | `architecture` | [diagram direction](references/architecture-diagrams.md), [architecture contract](references/preset-architecture.md) |
 | `pitch` | [design system](references/design-system.md), [pitch contract](references/preset-pitch.md) |
 | `briefing` | [design system](references/design-system.md), [briefing theme](references/theme-briefing.md), [briefing contract](references/preset-briefing.md) |
 | `slides` | [design system](references/design-system.md), [Dify-X theme](references/theme-dify-x.md), [slides contract](references/preset-slides.md) |
 | `archive` | [win98-web theme](references/theme-win98-web.md), [archive contract](references/preset-archive.md) |
-| `prototype-lite`, `prototype-full` | [design system](references/design-system.md), [prototype contract](references/preset-prototype.md) |
+| `prototype-lite`, `prototype-full` | [design system](references/design-system.md), [prototype contract](references/preset-prototype.md), [rendered acceptance](references/rendered-acceptance.md) |
 | `dossier` | [design system](references/design-system.md), [dossier contract](references/preset-dossier.md) |
 
 When an Artifact contains charts, read [chart method](references/chart-method.md) before authoring or revising them. Within Blueprint Artifacts this reference governs chart method, even when another chart Skill is available. Apply its form/encoding rules before drawing and complete its rendered acceptance steps before delivery. Copy its dashboard shell and shared label-column layout for dashboards, bind chart colors through CSS custom properties, and verify light → dark → filter → light when both modes are supported. It supplies copyable defaults for stated surfaces and rendered acceptance checks; it does not select a Theme or alter the `html` scaffold. Keep the dossier entity-slot contract.
@@ -102,7 +102,8 @@ When an Artifact contains charts, read [chart method](references/chart-method.md
 4. For `html`, run `blueprint create html <output>` first, then directly author `<output>/index.html` and run `blueprint check <output>`. Keep the stable directory and CLI-owned manifest. Author local images, CSS, JavaScript, and data in any layout under the Artifact directory. No framework bootstrap is required. Keep private working notes under `.local/` or outside the Artifact; dotfiles and hidden directories are not published, and symbolic links are rejected. Repeating create checks and preserves existing HTML.
 5. For `progress`, run `blueprint create progress <output>`, then edit only `src/progress.json`. After every item status change or new owner decision, update the JSON and `updated_at`, then rerun `blueprint create progress <output>` and `blueprint check <output>`. The repeated create reads the JSON and preserves project identity. `check` validates but does not compile the page. If check fails, fix the JSON and repeat both commands.
 6. For `prototype-lite`, `prototype-full`, or `dossier`, run `blueprint create <preset> <output>` before filling topic-specific content.
-7. For `architecture`, render and inspect the PNG before returning the review path. For other Presets, return the output path and the appropriate preview command. Do not install dependencies or start a server unless the user requested preview or deployment.
+7. For `html`, `prototype-lite`, and `prototype-full`, complete [rendered acceptance](references/rendered-acceptance.md) before delivery. Run `check` on the final content, start the required local preview, and use `ego-browser` at wide and narrow widths. Open and inspect screenshots, exercise controls and keyboard paths, inspect console events, and fix visual or functional defects. For prototypes, finish the reviewed flow through failure and recovery. Return the path and acceptance evidence. If a required tool is unavailable, report the exact unverified scope instead of claiming completion.
+8. For `architecture`, render and inspect the PNG before returning the review path. For Presets other than `architecture`, `html`, and prototypes, return the output path and the appropriate preview command. Start a server or install dependencies only when the requested operation or required acceptance needs them.
 
 Let `blueprint create` own the `.blueprint.json` schema and initial manifest. Never create, copy, delete, add, remove, or rename manifest fields. During a verified upgrade, the Agent may update only the existing `createdWith` value.
 
@@ -116,7 +117,7 @@ Treat an upgrade as a preservation-first semantic merge, not regeneration.
 4. Compare the Artifact with the current preset references. Apply missing Blueprint-owned runtime, compiler chrome, validation, accessibility, and required structural improvements with the smallest patch. Do not retrofit new default styling unless the user asks for it.
 5. Preserve user-owned changes. When a required Blueprint change overlaps them, merge around the customization when safe; otherwise stop and report the conflict instead of overwriting it.
 6. Do not copy a fresh preset over the project or begin by rerunning `blueprint create`. For compiled presets, regenerate compiler-owned output only after preserving any output-only customization in semantic sources. For scaffold presets, patch the existing source in place.
-7. Run `blueprint check <target>`, visually verify the exact upgraded behavior, and inspect the final diff for lost content, branding, styles, or layout.
+7. Run `blueprint check <target>`, visually verify the exact upgraded behavior, and inspect the final diff for lost content, branding, styles, or layout. For `html` and prototypes, complete [rendered acceptance](references/rendered-acceptance.md), including the reviewed failure and recovery for prototypes.
 8. Only after the upgrade and verification succeed, update the existing `.blueprint.json.createdWith` value to the exact current Blueprint version while preserving every other manifest field. For `html`, successfully checking the unchanged entry against the current delivery contract also qualifies as a verified contract upgrade. `createdWith` records the last verified Blueprint contract version, not content history or rollback support. If no preset change was applied to another Preset or verification fails, leave it unchanged.
 
 ## Operate a project
@@ -155,7 +156,7 @@ Omit `--account` by default. Let the CLI resolve the recorded account, `CLOUDFLA
 
 ## Boundaries
 
-- Do not run `git init`, install dependencies, or start a server unless required by the requested operation.
+- Do not run `git init` unless the requested operation requires it. Install dependencies or start a server only when the requested operation or required acceptance needs them.
 - Do not add unrequested documentation, linters, formatters, hooks, state libraries, or UI frameworks.
 - Do not write narration comments.
 - Preview only the compiled root `index.html` for `architecture`, `pitch`, `briefing`, `slides`, `archive`, and `progress`.
