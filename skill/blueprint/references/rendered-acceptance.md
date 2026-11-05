@@ -32,13 +32,24 @@ Wait for the Artifact's actual content before capturing asynchronous views. A lo
 
 At each viewport size, run this expression through the host tool's page JavaScript capability.
 If the host tool evaluates only functions, wrap the expression as `() => (...)`.
-It returns the page-width measurement and visible controls that need name or label inspection.
+It returns page width, controls that need name or label inspection, and text color pairs with ready-to-run contrast commands.
 This DOM screening does not replace the host tool's inspection of accessible names, including controls inside frames or shadow roots.
 
 ```js
 (() => {
-  const visible = element => element.getClientRects().length > 0 &&
-    getComputedStyle(element).visibility !== "hidden";
+  const geometry = new WeakMap();
+  const box = element => {
+    if (!geometry.has(element)) geometry.set(element, {
+      rects: Array.from(element.getClientRects()), bounds: element.getBoundingClientRect(),
+    });
+    return geometry.get(element);
+  };
+  const styles = new WeakMap();
+  const styleOf = element => {
+    if (!styles.has(element)) styles.set(element, getComputedStyle(element));
+    return styles.get(element);
+  };
+  const visible = element => box(element).rects.length > 0 && styleOf(element).visibility !== "hidden";
   const text = element => element.textContent?.trim() || "";
   const name = element => {
     const labelledBy = (element.getAttribute("aria-labelledby") || "")
@@ -70,18 +81,203 @@ This DOM screening does not replace the host tool's inspection of accessible nam
     return !labelledBy && !element.getAttribute("aria-label")?.trim() &&
       !Array.from(element.labels || []).some(label => text(label)) && !element.getAttribute("title")?.trim();
   }).map(describe);
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 1;
+  const context = canvas.getContext("2d", { colorSpace: "srgb", willReadFrequently: true });
+  const hex = () => "#" + Array.from(context.getImageData(0, 0, 1, 1).data)
+    .slice(0, 3).map(channel => channel.toString(16).padStart(2, "0")).join("");
+  const paint = color => {
+    if (!CSS.supports("color", color)) throw new Error("Unsupported color: " + color);
+    context.fillStyle = color;
+    context.fillRect(0, 0, 1, 1);
+  };
+  const alphas = new Map();
+  const alpha = color => {
+    if (!context) return 1;
+    if (!alphas.has(color)) {
+      context.clearRect(0, 0, 1, 1);
+      paint(color);
+      alphas.set(color, context.getImageData(0, 0, 1, 1).data[3]);
+    }
+    return alphas.get(color);
+  };
+  const selector = element => {
+    if (element.id) return "#" + CSS.escape(element.id);
+    const parts = [];
+    for (let current = element; current && current !== document.documentElement; current = current.parentElement) {
+      parts.unshift(current.localName + ":nth-child(" +
+        (Array.from(current.parentElement.children).indexOf(current) + 1) + ")");
+    }
+    return "html > " + parts.join(" > ");
+  };
+  const elements = Array.from(document.querySelectorAll("body *")).filter(visible);
+  const layouts = elements.map(element => ({ element, rects: box(element).rects }));
+  const pairs = new Map();
+  const unresolved = new Map();
+  const recordUnresolved = (element, sample, reasons) => {
+    const key = selector(element) + "|" + reasons.join("|");
+    const item = unresolved.get(key);
+    if (item) item.count++;
+    else unresolved.set(key, { selector: selector(element), sample, reasons, count: 1 });
+  };
+  const measure = (element, sample, rects, color) => {
+    let stopClipping = false;
+    for (let current = element; current; current = current.parentElement) {
+      const style = styleOf(current);
+      if (stopClipping) break;
+      stopClipping = style.position === "absolute" || style.position === "fixed";
+      if (style.display === "inline" || style.display === "contents" ||
+          ((style.overflowX === "clip" || style.overflowY === "clip") &&
+           (style.overflowClipMargin || "0px").split(" ").some(value => parseFloat(value) > 0))) continue;
+      const bounds = box(current).bounds;
+      const left = bounds.left + current.clientLeft, top = bounds.top + current.clientTop;
+      rects = rects.map(rect => ({
+        left: style.overflowX === "visible" ? rect.left : Math.max(rect.left, left),
+        right: style.overflowX === "visible" ? rect.right : Math.min(rect.right, left + current.clientWidth),
+        top: style.overflowY === "visible" ? rect.top : Math.max(rect.top, top),
+        bottom: style.overflowY === "visible" ? rect.bottom : Math.min(rect.bottom, top + current.clientHeight),
+      })).filter(rect => rect.right > rect.left && rect.bottom > rect.top);
+    }
+    if (!rects.length) return;
+    const chain = [];
+    const reasons = new Set();
+    for (let current = element; current; current = current.parentElement) {
+      const style = styleOf(current);
+      chain.push(style);
+      if (style.visibility !== "visible") reasons.add("non-visible ancestor");
+      const canvasBackground = current === document.documentElement ||
+        (current === document.body && alpha(styleOf(document.documentElement).backgroundColor) === 0);
+      if (!canvasBackground && alpha(style.backgroundColor) > 0) {
+        if (sample === "::marker" && styleOf(element).listStylePosition === "outside") reasons.add("marker background or image");
+        const bounds = box(current).bounds;
+        if (style.display === "contents" || rects.some(rect =>
+          rect.left < bounds.left - 1 || rect.right > bounds.right + 1 ||
+          rect.top < bounds.top - 1 || rect.bottom > bounds.bottom + 1)) {
+          reasons.add("background box does not cover text");
+        }
+      }
+      if (style.backgroundImage !== "none") reasons.add("background-image");
+      if (Number(style.opacity) < 1) reasons.add("opacity");
+      if (style.filter !== "none" || (style.backdropFilter && style.backdropFilter !== "none")) reasons.add("filter");
+      if (style.mixBlendMode !== "normal") reasons.add("mix-blend-mode");
+      if (style.backgroundClip === "text" || (style.webkitTextFillColor && style.webkitTextFillColor !== style.color)) reasons.add("text fill");
+      if (style.maskImage && style.maskImage !== "none") reasons.add("mask");
+      if (style.clipPath !== "none") reasons.add("clip-path");
+      for (const pseudo of ["::first-line", "::first-letter"]) {
+        const pseudoStyle = getComputedStyle(current, pseudo);
+        if (pseudoStyle.color !== style.color) reasons.add("pseudo-element text color");
+        if (alpha(pseudoStyle.backgroundColor) > 0 || pseudoStyle.backgroundImage !== "none") reasons.add("pseudo-element background");
+      }
+      for (const pseudo of ["::before", "::after"]) {
+        const content = getComputedStyle(current, pseudo).content;
+        if (content && content !== "none" && content !== "normal") reasons.add("pseudo-element");
+      }
+    }
+    const overlaps = layouts.some(({ element: other, rects: boxes }) => other !== element &&
+      boxes.some(box => rects.some(rect => box.width > 0 && box.height > 0 &&
+        box.left < rect.right && box.right > rect.left && box.top < rect.bottom && box.bottom > rect.top)) &&
+      !other.contains(element));
+    if (overlaps) reasons.add("overlapping element");
+    if (!context) reasons.add("sRGB canvas unavailable");
+    if (reasons.size) {
+      recordUnresolved(element, sample, Array.from(reasons));
+      return;
+    }
+    try {
+      context.clearRect(0, 0, 1, 1);
+      const backgrounds = chain.reverse();
+      for (const style of backgrounds) paint(style.backgroundColor);
+      if (context.getImageData(0, 0, 1, 1).data[3] < 255 &&
+          (styleOf(document.documentElement).colorScheme.includes("dark") ||
+           /\bdark\b/i.test(document.querySelector('meta[name="color-scheme" i]')?.content || ""))) {
+        recordUnresolved(element, sample, ["browser canvas color"]);
+        return;
+      }
+      context.clearRect(0, 0, 1, 1);
+      paint("#ffffff");
+      for (const style of backgrounds) paint(style.backgroundColor);
+      const background = hex();
+      paint(color);
+      const foreground = hex();
+      const key = foreground + "|" + background;
+      const item = pairs.get(key);
+      if (item) item.count++;
+      else pairs.set(key, {
+        foreground, background, count: 1,
+        sample: { selector: selector(element), text: sample, color },
+        command: `blueprint palette check '${foreground}' --mode light --kind text --surface '${background}' --json`,
+      });
+    } catch (error) {
+      recordUnresolved(element, sample, [String(error)]);
+    }
+  };
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    const element = node.parentElement;
+    const sample = node.textContent.trim().replace(/\s+/g, " ").slice(0, 80);
+    if (!sample || !visible(element) || element.closest("script, style, noscript, template, svg, canvas, iframe, input, textarea, select")) continue;
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const rects = Array.from(range.getClientRects()).filter(rect => rect.width > 0 && rect.height > 0);
+    if (rects.length) measure(element, sample, rects, styleOf(element).color);
+  }
+  for (const element of elements) {
+    const style = styleOf(element);
+    if (style.display === "list-item") {
+      const marker = getComputedStyle(element, "::marker");
+      if (marker.content !== "none" && marker.content !== '""' && marker.content !== "''" &&
+          (style.listStyleType !== "none" || style.listStyleImage !== "none" || marker.content !== "normal")) {
+        if (style.listStyleImage !== "none" || marker.backgroundImage !== "none" ||
+            alpha(marker.backgroundColor) > 0) {
+          recordUnresolved(element, "::marker", ["marker background or image"]);
+        } else if (marker.color !== style.color) {
+          measure(element, "::marker", box(element).rects, marker.color);
+        }
+      }
+    }
+    for (const pseudo of ["::before", "::after"]) {
+      const content = getComputedStyle(element, pseudo).content;
+      if (content && content !== "none" && content !== "normal") {
+        recordUnresolved(element, content.slice(0, 80), ["generated pseudo-element text"]);
+      }
+    }
+    if (element.matches("input, textarea, select, svg, canvas, iframe") || element.shadowRoot) {
+      recordUnresolved(element, text(element).slice(0, 80) || element.getAttribute("placeholder") || element.value || "", ["inspect native, SVG, canvas, frame or open shadow text"]);
+    }
+  }
   return {
     viewport: innerWidth,
     pageWidth: document.documentElement.scrollWidth,
     overflows: document.documentElement.scrollWidth > innerWidth,
     unnamedControls,
     unlabeledInputs,
+    textContrast: { pairs: Array.from(pairs.values()), unresolved: Array.from(unresolved.values()) },
   };
 })()
 ```
 
 Save the returned measurements and a full-page screenshot at each size.
-Repeat the measurements and screenshots after interaction state changes.
+Run every `textContrast.pairs[].command` before continuing. Save each command, exit status, and JSON result, including FAIL results.
+For a supported dark appearance, change only `--mode light` to `--mode dark` in each command.
+Do not replace `--surface` with a default surface or skip repeated colors on different backgrounds.
+Treat every FAIL as a defect. Correct it and rerun the measurement and commands.
+For every `textContrast.unresolved` item, inspect the named element and resolve the actual foreground and background before using `palette check`.
+If you cannot resolve an item, record its selector, sample, reason, and state as an exact unverified item.
+Do not claim complete contrast acceptance while any FAIL or unresolved item remains.
+Repeat the measurements, commands, and screenshots after interaction state changes.
+
+The expression uses a one-pixel sRGB canvas to convert CSS colors and composite ancestor backgrounds over white.
+It composites foreground alpha over the resulting background before producing opaque hex values for the CLI.
+Pairs are deduplicated by foreground and background, with a sample count and one text example.
+It marks uncovered background boxes, images, gradients, filters, blending, opacity, masks, pseudo-element text, and overlapping boxes as unresolved.
+Native controls, SVG, canvas, frames, and open shadow roots need separate inspection and appear as unresolved items.
+Page JavaScript cannot measure text inside closed shadow roots, so inspect that text in screenshots.
+Inspect screenshots for box-shadow or outline spotlights and absolute pseudo-element overlays from sibling elements.
+Inspect slotted light-DOM text for backgrounds painted inside shadow roots.
+Inspect screenshots for `background-clip` padding-box/content-box, negative `z-index` text behind overlays, and overlays outside `<body>`.
+This is DOM screening, not a pixel audit. Inspect screenshots for clipping, hidden text, text effects, and non-white browser canvas defaults.
+Dark browser canvas defaults declared by CSS or metadata appear as unresolved items when no opaque background covers the text. Resolve any other non-white canvas default before acceptance.
 
 ## Inspect and exercise
 
@@ -99,15 +295,8 @@ Measure page overflow at both widths and after state changes. Require `pageWidth
 Do not mask overflow with page-level `overflow-x: hidden`. Reflow the offending content.
 A necessary two-dimensional table can scroll inside a labeled, keyboard-reachable container. The page must still fit the viewport.
 
-For suspect or critical text, record the computed foreground and the actual opaque background behind it.
-Resolve transparent ancestors or composited surfaces before measuring contrast.
-Pass their hex values to the existing numeric check:
-
-```bash
-blueprint palette check '#FOREGROUND' --mode light --kind text --surface '#BACKGROUND' --json
-```
-
-Use `--mode dark` for a supported dark appearance. Keep `--surface` bound to the actual background.
+Use the measured color pairs and commands above for all returned text, not only text that looks suspect.
+Keep contrast math in `blueprint palette check`. Do not calculate contrast in page JavaScript.
 This screening requires 4.5:1 for text. A numeric PASS does not prove readability, hierarchy, or full accessibility.
 Inspect screenshots as well. If the Artifact supports multiple appearance modes, repeat for each supported mode.
 Do not add an appearance mode for this procedure.
@@ -123,7 +312,7 @@ Keep the acceptance evidence outside published content. Record these details in 
 - Artifact entry URL and the exact version or files tested.
 - Viewport sizes, screenshot paths, and what you observed when opening each image.
 - Controls and keyboard paths exercised, including the prototype failure and recovery result.
-- Page-width measurements, console findings, corrections, and anything still unverified.
+- Page-width measurements, color pairs, palette results, unresolved elements, console findings, corrections, and anything still unverified.
 
 Keep the browser session available while inspecting screenshots and rerunning corrections.
 After those steps pass, close the browser session according to the host environment's browser instructions.
