@@ -19,7 +19,7 @@ Do not classify from aesthetic preference alone. A visually distinctive referenc
 
 ## Capture the reference
 
-- For a live URL or local web app, use `ego-browser` to capture the rendered desktop and mobile surfaces, meaningful interaction states, console state, and runtime behavior.
+- For a live URL or local web app, follow the host environment's browser instructions and use its browser automation. Capture the rendered desktop and mobile surfaces, meaningful interaction states, console state, and runtime behavior.
 - For screenshots or images, inspect the highest available resolution and state what structure or behavior cannot be proven.
 - For PDF or PPT material, render and inspect the complete page or slide sequence. Do not classify from the cover alone. Inspect source layouts or masters when available.
 - For a repository, distinguish executable behavior, content, assets, framework defaults, and visual conventions.
