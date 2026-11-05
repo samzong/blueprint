@@ -77,7 +77,7 @@ Use this only when the dossier includes a maintained paper, source, or evidence 
 
 When rebuilding from a live URL, screenshot, recovered artifact, or legacy output:
 
-1. Use `ego-browser` to capture desktop and mobile structure plus every meaningful interaction state.
+1. Follow the host environment's browser instructions and use its browser automation. Capture desktop and mobile structure and meaningful interaction states.
 2. Inventory the content hierarchy, comparison axes, evidence records, source links, and visual assets.
 3. Treat recovered HTML, CSS, bundles, and screenshots as reference inputs only.
 4. Rebuild the report from typed semantic data and maintainable React components.
@@ -91,6 +91,6 @@ Before a requested preview, visual review, or deployment handoff:
 1. Run `blueprint check <project>`.
 2. Run `pnpm build`.
 3. Preview through Blueprint or the project Vite server.
-4. Use `ego-browser` at desktop and mobile widths to verify the full content surface, navigation, filters, dialogs, local assets, and console state.
+4. Follow the host environment's browser instructions and use its browser automation at desktop and mobile widths. Verify the full content surface, navigation, filters, dialogs, local assets, and console state.
 5. Confirm there are no unresolved starter records, broken images, unexpected remote runtime assets, or missing source links.
 6. For a visual rebuild, compare matching viewport and interaction-state screenshots. `blueprint check` alone does not prove fidelity.

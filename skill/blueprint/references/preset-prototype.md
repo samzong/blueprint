@@ -54,6 +54,7 @@ Keep state local and add routing only for real multiple pages.
 ## Acceptance
 
 Complete [rendered acceptance](rendered-acceptance.md) before delivery for either prototype Preset.
+Follow the host environment's browser instructions and use its browser automation for the procedure.
 At wide and narrow widths, trigger the failure and finish recovery in the actual browser.
 Record input retention, error focus, the retry result, and the visible real-product boundary.
 Inspect screenshots of the initial, failed, and recovered views. Functional clicks alone do not establish visual acceptance.

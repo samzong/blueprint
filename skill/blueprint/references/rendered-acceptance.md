@@ -9,49 +9,79 @@ This procedure does not select a Theme or change the `html` scaffold.
 1. Run `blueprint check <output>` after authoring the final content.
 2. For `prototype-full`, install missing dependencies with `pnpm install --ignore-workspace`, then run `pnpm build` in the Artifact.
 3. Run `blueprint preview <output>` and use the exact entry URL that it prints.
-4. Read the installed `ego-browser skill` guide before browser work.
-5. Create one TaskSpace for this Artifact and print its ID. Resume that space in later rounds.
+4. Follow the host environment's browser instructions and use the browser automation that it provides.
+5. Keep the browser session available for screenshot inspection, corrections, and reruns.
 
 Creation authorizes the local preview needed for acceptance. Stop only the preview process that you started after acceptance.
-If the browser, preview, or image viewer is unavailable, report the exact failure and the unverified scope.
-Return the Artifact path for recovery, but do not call delivery or visual acceptance complete.
 Do not install or upgrade browser tools without separate authorization.
+If the preview, image viewer, or a required browser capability is unavailable, report the exact failure and unverified scope.
+Return the Artifact path for recovery, but do not call delivery or visual acceptance complete.
 
-Copy this pattern into `ego-browser nodejs`. Replace the task name, exact preview URL, and absolute evidence directory.
-Create the evidence directory outside the published content before running it.
+The host browser automation must provide these capabilities:
+
+- Set the viewport to wide 1280×900 and narrow 375×812 CSS pixels. Use desktop emulation, not mobile emulation, with device scale factor 1.
+- Capture console messages, uncaught exceptions, and failed resources from page load and after interactions.
+- Capture full-page screenshots and expose rendered control names and labels through a snapshot or accessibility inspection.
+- Run JavaScript in the page and operate controls with pointer and keyboard input.
+
+Create an evidence directory outside the published content.
+Enable console capture before navigating to the exact preview URL, or enable capture and reload before collecting startup evidence.
+Save startup messages before any operation that clears the event buffer.
+Inspect errors, exceptions, warnings, and failed resources. Explain unrelated warnings with evidence instead of hiding them.
+Wait for the Artifact's actual content before capturing asynchronous views. A load event alone does not prove that React mounted.
+
+At each viewport size, run this expression through the host tool's page JavaScript capability.
+If the host tool evaluates only functions, wrap the expression as `() => (...)`.
+It returns the page-width measurement and visible controls that need name or label inspection.
+This DOM screening does not replace the host tool's inspection of accessible names, including controls inside frames or shadow roots.
 
 ```js
-const task = await taskSpace("accept Artifact SESSION_ID");
-const page = task.page("p1");
-await page.goto("http://127.0.0.1:PORT/index.html");
-await page.cdp("egoAutomated.disable");
-await page.cdp("Runtime.enable");
-await page.cdp("Log.enable");
-await page.events();
-await page.reload();
-const startupEvents = (await page.events()).filter(event =>
-  ["Runtime.exceptionThrown", "Runtime.consoleAPICalled", "Log.entryAdded"].includes(event.method)
-);
-console.log({ spaceId: task.spaceId, startupEvents });
-for (const [name, width, height] of [["wide", 1280, 900], ["narrow", 375, 812]]) {
-  await page.cdp("Emulation.setDeviceMetricsOverride", {
-    width, height, deviceScaleFactor: 1, mobile: false,
+(() => {
+  const visible = element => element.getClientRects().length > 0 &&
+    getComputedStyle(element).visibility !== "hidden";
+  const text = element => element.textContent?.trim() || "";
+  const name = element => {
+    const labelledBy = (element.getAttribute("aria-labelledby") || "")
+      .split(/\s+/).filter(Boolean)
+      .map(id => text(document.getElementById(id) || document.createElement("span"))).join(" ").trim();
+    return labelledBy || element.getAttribute("aria-label")?.trim() ||
+      Array.from(element.labels || []).map(text).join(" ").trim() ||
+      (element.matches("input") ? element.value?.trim() : text(element)) ||
+      Array.from(element.querySelectorAll("img[alt]")).map(image => image.alt).join(" ").trim() ||
+      element.getAttribute("alt")?.trim() || element.getAttribute("title")?.trim() ||
+      (element.matches('input[type="submit"]') ? "Submit" : "") ||
+      (element.matches('input[type="reset"]') ? "Reset" : "");
+  };
+  const describe = element => ({
+    tag: element.tagName.toLowerCase(),
+    id: element.id,
+    role: element.getAttribute("role"),
+    type: element.getAttribute("type"),
+    text: text(element).slice(0, 120),
   });
-  await page.waitForFunction(() => document.readyState === "complete");
-  console.log(await page.snapshot({ scope: "full_page" }));
-  console.log(await page.evaluate(() => ({
+  const unnamedControls = Array.from(document.querySelectorAll(
+    'button, a[href], input[type="button"], input[type="submit"], input[type="reset"], [role="button"], [role="link"]'
+  )).filter(visible).filter(element => !name(element)).map(describe);
+  const unlabeledInputs = Array.from(document.querySelectorAll(
+    'input:not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]), select, textarea'
+  )).filter(visible).filter(element => {
+    const labelledBy = (element.getAttribute("aria-labelledby") || "").split(/\s+/)
+      .some(id => text(document.getElementById(id) || document.createElement("span")));
+    return !labelledBy && !element.getAttribute("aria-label")?.trim() &&
+      !Array.from(element.labels || []).some(label => text(label)) && !element.getAttribute("title")?.trim();
+  }).map(describe);
+  return {
     viewport: innerWidth,
     pageWidth: document.documentElement.scrollWidth,
     overflows: document.documentElement.scrollWidth > innerWidth,
-  })));
-  console.log(await page.screenshot({ path: `/ABSOLUTE/EVIDENCE/${name}.png`, fullPage: true }));
-}
+    unnamedControls,
+    unlabeledInputs,
+  };
+})()
 ```
 
-Wait for the Artifact's actual content before capturing asynchronous views. A load event alone does not prove that React mounted.
-Enabling console capture before reload includes startup failures. `page.events()` drains the buffer. Save relevant events before draining again.
-Inspect `Runtime.exceptionThrown`, `Runtime.consoleAPICalled`, and `Log.entryAdded`, including warnings and failed resources.
-After interactions, collect events again. Explain unrelated warnings with evidence instead of hiding them.
+Save the returned measurements and a full-page screenshot at each size.
+Repeat the measurements and screenshots after interaction state changes.
 
 ## Inspect and exercise
 
@@ -95,12 +125,6 @@ Keep the acceptance evidence outside published content. Record these details in 
 - Controls and keyboard paths exercised, including the prototype failure and recovery result.
 - Page-width measurements, console findings, corrections, and anything still unverified.
 
-Keep the TaskSpace open while inspecting screenshots and rerunning corrections.
-After those steps pass, run this separate completion round with the recorded ID:
-
-```js
-const task = await taskSpace(SPACE_ID);
-await task.finish({ keep: [] });
-```
-
+Keep the browser session available while inspecting screenshots and rerunning corrections.
+After those steps pass, close the browser session according to the host environment's browser instructions.
 Keep a result page only when the user needs it to continue. Stop your preview process after the browser work ends.
