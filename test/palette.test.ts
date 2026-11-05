@@ -98,8 +98,8 @@ test("rejects unsupported colors and malformed ramps before computation", () => 
   assert.throws(() => checkPalette(["#123", "#456", "#789", "#abc"], "light", "diverging"));
 });
 
-test("built CLI exposes complete JSON and truthful process exit status", () => {
-  const invoke = (args: string[]) => spawnSync(process.execPath, ["dist/bin.js", "palette", "check", ...args], { encoding: "utf8" });
+test("source CLI exposes complete JSON and truthful process exit status", () => {
+  const invoke = (args: string[]) => spawnSync(process.execPath, ["src/bin.ts", "palette", "check", ...args], { encoding: "utf8" });
   const good = invoke(["#255387,#bf8832,#248164,#9572b1,#682122", "--mode", "light", "--json"]);
   assert.equal(good.status, 0, good.stderr);
   const result = JSON.parse(good.stdout);

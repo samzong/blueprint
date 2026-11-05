@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
+import { execFile, spawnSync } from "node:child_process";
 import { cp, mkdir, mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -27,6 +27,13 @@ test("installs a runnable package with every preset and the bundled skill", { ti
   const { stdout: version } = await exec(executable, ["--version"], { cwd: scratch });
   const metadata: { version: string } = JSON.parse(await readFile(path.join(repository, "package.json"), "utf8"));
   assert.equal(version.trim(), `blueprint ${metadata.version}`);
+
+  const palettePass = spawnSync(executable, ["palette", "check", "#255387,#bf8832,#248164,#9572b1,#682122", "--mode", "light", "--json"], { cwd: scratch, encoding: "utf8" });
+  assert.equal(palettePass.status, 0, palettePass.stderr);
+  assert.equal(JSON.parse(palettePass.stdout).pass, true);
+  const paletteFail = spawnSync(executable, ["palette", "check", "#243078,#c07818,#243079", "--mode", "light", "--json"], { cwd: scratch, encoding: "utf8" });
+  assert.equal(paletteFail.status, 1, paletteFail.stderr);
+  assert.equal(JSON.parse(paletteFail.stdout).pass, false);
 
   const { stdout: help, stderr: helpError } = await exec(executable, [], { cwd: scratch });
   assert.equal(helpError, "");
