@@ -14,7 +14,7 @@ flowchart TB
     Agent["Host coding agent"]:::actor
 
     Skill["Bundled Agent Skill<br/>preset selection · research · direct composition<br/>upgrade merge · visual judgment"]:::skill
-    Refs["Skill references<br/>preset-*.md · architecture-diagrams.md<br/>theme-*.md · design-system.md · chart-method.md"]:::skill
+    Refs["Skill references<br/>preset-*.md · architecture-diagrams.md<br/>theme-*.md · design-system.md<br/>chart-method.md · rendered-acceptance.md"]:::skill
 
     subgraph CLI["blueprint CLI"]
         direction TB
@@ -39,6 +39,7 @@ flowchart TB
     Portable["Portable architecture exports<br/>SVG · PNG"]:::artifact
 
     Preview["Local preview<br/>gofs or Vite"]:::external
+    Browser["Ego browser acceptance<br/>html + prototypes · wide / narrow screenshots<br/>controls · keyboard · console · recovery"]:::external
     Wrangler["Cloudflare Workers<br/>Static Assets deploy · optional basic-auth gate"]:::external
 
     User --> Agent
@@ -63,4 +64,6 @@ flowchart TB
     Validator --> Artifact
     Manifest --> ProjectMeta
     Commands -->|"preview"| Preview
+    Preview -->|"serves actual entry"| Browser
+    Skill -->|"required rendered acceptance for html + prototypes"| Browser
     Commands <-->|"validate name ≤54 chars · deploy archive index.html + llms text · verified URL"| Wrangler
