@@ -32,7 +32,7 @@ When present, use the repository `CONTEXT.md` as the canonical terminology sourc
 Ask at most one blocking question and only for missing information that changes the output:
 
 1. **Topic**: what the page must communicate.
-2. **Output directory**: default demos, examples, and scratch work to `.local/<slug>` in the current repository; ask only for standalone-project locations.
+2. **Output directory**: default Artifacts the owner will inspect, including demos and examples, to `.local/<slug>` in the current repository. Ask only for standalone-project locations. Keep disposable scratch (regenerable output the owner will not inspect) outside the repository and `.local/`. When `/Volumes/git` is mounted, use `mktemp -d /Volumes/git/scratch/<task>-XXXXXX` for disposable scratch. Otherwise, use `mktemp -d`. Its creator must delete it when finished.
 3. **Preset**: infer it when exactly one row matches.
 
 | Intent | Preset |
