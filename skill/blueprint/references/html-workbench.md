@@ -8,9 +8,9 @@ The CLI injects no CSS, chrome, or JavaScript framework for `html`. You author t
 
 Match the chrome density to the scope of the Artifact.
 
-- Multi-tab workbench: Use `.top-note`, `.stage-window`, `.window-chrome`, `.view-tabs`, `.quota-strip`, and optional `.master-detail` split views for dashboards, analytics tools, and reference consoles with several views.
-- Single-panel window: Omit `.view-tabs` and `.master-detail` when one focused view answers the prompt. Keep `.page-shell`, `.top-note`, `.stage-window`, and `.pane-head`.
-- Full-scroll toggle: Add `#layout-toggle` in `.preview-tools` only when the user benefits from viewing all tab panels at once (`body[data-layout="full"] .view-panel[hidden] { display: block !important; }`).
+- Multi-tab workbench (default for project explainers, system guides, cross-functional shares, reports, and dashboards): Use `.page-shell`, `.top-note`, `#layout-toggle`, the three-mode `[data-theme-mode]` switch (`system`, `light`, `dark`), `.stage-window`, `.window-chrome`, `.view-tabs` (3 to 5 tabs with `.key-badge` numbers `1` through `N`), `.quota-strip` (3 to 4 key figures), `.master-detail` split views, and `.footnote`.
+- Single-panel window: Omit `.view-tabs` and `.master-detail` only when the user explicitly requests a single-view utility or one standalone chart. Keep `.page-shell`, `.top-note`, the `[data-theme-mode]` switch, `.stage-window`, `.pane-head`, and `.footnote`.
+- Full-scroll toggle: Include `#layout-toggle` in `.preview-tools` on every multi-tab workbench so the user can view all tab panels at once (`body[data-layout="full"] .view-panel[hidden] { display: block !important; }`).
 
 ## Light and dark palette tokens
 
@@ -89,7 +89,7 @@ If you combine [chart method](chart-method.md) tokens with a manual theme toggle
 
 ## Workbench layout and typography
 
-Keep body copy compact at `13.5px` (`line-height: 1.55`) with system sans fonts and `font-variant-numeric: tabular-nums` on numbers, ranks, and counts. Add these base styles and component classes after the tokens above.
+Keep body copy compact at `13.5px` (`line-height: 1.55`) with system sans fonts and `font-variant-numeric: tabular-nums` on numbers, ranks, and counts. Keep `h1` and `h2` at `15px` to `16px` (`font-weight: 600`), `h3` at `13px` to `13.5px`, `.vtab` at `12px` to `12.5px` (`height: 34px`), and `.card-btn` titles at `13px`. Do not enlarge body copy to `15px` or headings to `18px`–`40px` for screen sharing or presentation rooms. Add these base styles and component classes after the tokens above.
 
 ```css
 *, *::before, *::after { box-sizing: border-box; }
@@ -105,6 +105,8 @@ body {
 }
 :focus-visible { outline: 2px solid var(--attention); outline-offset: 2px; }
 [hidden] { display: none !important; }
+body[data-layout="full"] .view-panel[hidden] { display: block !important; }
+body[data-layout="full"] .view-panel + .view-panel { border-top: 2px solid var(--line-strong); }
 details:not([open]) > *:not(summary) { display: none; }
 code, pre, kbd, .code-token { font-family: Menlo, Consolas, "Courier New", Courier, monospace; font-size: 0.88em; }
 .num, td.num, th.num { font-variant-numeric: tabular-nums; }
@@ -362,6 +364,7 @@ Structure each workbench page with `.page-shell`, `.top-note`, `.stage-window`, 
       <p class="note-sub">Short scope summary</p>
     </div>
     <div class="preview-tools">
+      <button type="button" id="layout-toggle" class="pill-btn" aria-pressed="false">Expand all panels</button>
       <div class="pill-track" role="group" aria-label="Theme mode">
         <button type="button" class="pill-seg" data-theme-mode="system" aria-pressed="true">System</button>
         <button type="button" class="pill-seg" data-theme-mode="light" aria-pressed="false">Light</button>
@@ -372,21 +375,26 @@ Structure each workbench page with `.page-shell`, `.top-note`, `.stage-window`, 
   <div class="stage-window">
     <div class="window-chrome">
       <div class="view-tabs" role="tablist" aria-label="Workspace views">
-        <button type="button" class="vtab" role="tab" aria-selected="true"><span>Overview</span><span class="key-badge" aria-hidden="true">1</span></button>
+        <button type="button" class="vtab" role="tab" data-tab="overview" aria-controls="panel-overview" aria-selected="true"><span>Overview</span><span class="key-badge" aria-hidden="true">1</span></button>
       </div>
       <div class="quota-strip" role="region" aria-label="Key figures">
-        <span class="quota-item">Items <b>24</b></span>
+        <span class="quota-item">Items <b class="num">24</b></span>
       </div>
     </div>
     <main>
-      <section class="view-panel" role="tabpanel">
+      <section class="view-panel" id="panel-overview" role="tabpanel">
         <div class="pane-head">
-          <h2>Overview</h2>
-          <p class="view-lead">Primary metric comparison and detail readout.</p>
+          <div>
+            <h2>Overview</h2>
+            <p class="view-lead">Primary metric comparison and detail readout.</p>
+          </div>
+          <div class="pill-track" role="group" aria-label="Filter items">
+            <button type="button" class="pill-seg" data-filter="all" aria-pressed="true">All</button>
+          </div>
         </div>
         <div class="master-detail">
-          <div class="list-pane"></div>
-          <aside class="readout-pane" aria-live="polite"></aside>
+          <div class="list-pane" id="overview-list"></div>
+          <aside class="readout-pane" id="overview-detail" aria-live="polite"></aside>
         </div>
       </section>
     </main>
@@ -400,6 +408,65 @@ Structure each workbench page with `.page-shell`, `.top-note`, `.stage-window`, 
 
 When the user selects `"light"` or `"dark"`, set `document.documentElement.dataset.theme` to that mode. When the user selects `"system"`, delete `dataset.theme` so `@media (prefers-color-scheme: dark)` applies.
 
+## Interactive state and keyboard wiring
+
+Wire every multi-tab workbench with data-driven master-detail panels, secondary `.pill-seg` filters inside `.pane-head`, `#layout-toggle`, `[data-theme-mode]`, and digit keys `1` through `N` for tab selection. Keep tab panels interactive rather than static prose columns. Do not bind unadorned `ArrowLeft` or `ArrowRight` on `document` to switch tabs, because global arrow keys hijack horizontal scrolling and text selection.
+
+```js
+(() => {
+  const tabs = Array.from(document.querySelectorAll(".vtab[data-tab]"));
+  const panels = Array.from(document.querySelectorAll(".view-panel"));
+  const layoutToggle = document.getElementById("layout-toggle");
+
+  function selectTab(tabKey) {
+    tabs.forEach(tab => {
+      tab.setAttribute("aria-selected", String(tab.dataset.tab === tabKey));
+    });
+    panels.forEach(panel => {
+      panel.hidden = panel.id !== `panel-${tabKey}`;
+    });
+  }
+
+  tabs.forEach(tab => {
+    tab.addEventListener("click", () => selectTab(tab.dataset.tab));
+  });
+
+  if (layoutToggle) {
+    layoutToggle.addEventListener("click", () => {
+      const full = document.body.dataset.layout !== "full";
+      if (full) document.body.dataset.layout = "full";
+      else delete document.body.dataset.layout;
+      layoutToggle.setAttribute("aria-pressed", String(full));
+    });
+  }
+
+  document.querySelectorAll("[data-theme-mode]").forEach(button => {
+    button.addEventListener("click", () => {
+      const mode = button.dataset.themeMode;
+      document.querySelectorAll("[data-theme-mode]").forEach(item => {
+        item.setAttribute("aria-pressed", String(item === button));
+      });
+      if (mode === "light" || mode === "dark") {
+        document.documentElement.dataset.theme = mode;
+      } else {
+        delete document.documentElement.dataset.theme;
+      }
+    });
+  });
+
+  window.addEventListener("keydown", event => {
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    const target = event.target;
+    if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
+    const index = Number(event.key) - 1;
+    if (index >= 0 && index < tabs.length) {
+      event.preventDefault();
+      selectTab(tabs[index].dataset.tab);
+    }
+  });
+})();
+```
+
 ## Guardrails for charts and rendered acceptance
 
 Apply these rules whenever the workbench hosts charts or interactive lists so rendered acceptance passes on the first run.
@@ -409,3 +476,4 @@ Apply these rules whenever the workbench hosts charts or interactive lists so re
 3. Do not use `border-left: 3px solid ...` on a pinned card that contains bars. An asymmetric border changes inner track widths across rows. Use `box-shadow: inset 3px 0 0 var(--attention)` instead.
 4. Set `display: inline-block` on inline badges and `code`. Add `details:not([open]) > *:not(summary) { display: none; }` so closed Chromium disclosure elements report zero layout rectangles during [rendered acceptance](rendered-acceptance.md).
 5. Add `<link rel="icon" href="data:,">` in `<head>` when no local icon asset exists so local previews produce zero 404 requests.
+6. Keep `.view-tabs` between 3 and 5 tabs so `.window-chrome` stays compact and does not crowd `.quota-strip`. Use a secondary `.pill-track` inside `.pane-head` for sub-views, role perspectives, or category filters instead of adding more top-level tabs.

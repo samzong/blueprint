@@ -246,38 +246,38 @@ This DOM screening does not replace the host tool's inspection of accessible nam
       recordUnresolved(element, text(element).slice(0, 80) || element.getAttribute("placeholder") || element.value || "", ["inspect native, SVG, canvas, frame or open shadow text"]);
     }
   }
+  const h1 = document.querySelector("h1");
+  const h2 = document.querySelector("h2");
+  const workbench = {
+    bodyFontSize: parseFloat(styleOf(document.body).fontSize),
+    h1FontSize: h1 ? parseFloat(styleOf(h1).fontSize) : null,
+    h2FontSize: h2 ? parseFloat(styleOf(h2).fontSize) : null,
+    hasStageWindow: Boolean(document.querySelector(".stage-window")),
+    hasWindowChrome: Boolean(document.querySelector(".window-chrome")),
+    tabCount: document.querySelectorAll(".vtab").length,
+    themeButtonCount: document.querySelectorAll("[data-theme-mode]").length,
+    hasLayoutToggle: Boolean(document.querySelector("#layout-toggle")),
+    hasQuotaStrip: Boolean(document.querySelector(".quota-strip")),
+    masterDetailCount: document.querySelectorAll(".master-detail").length,
+    hasFootnote: Boolean(document.querySelector(".footnote")),
+  };
   return {
     viewport: innerWidth,
     pageWidth: document.documentElement.scrollWidth,
     overflows: document.documentElement.scrollWidth > innerWidth,
     unnamedControls,
     unlabeledInputs,
+    workbench,
     textContrast: { pairs: Array.from(pairs.values()), unresolved: Array.from(unresolved.values()) },
   };
 })()
 ```
 
 Save the returned measurements and a full-page screenshot at each size.
-Run every `textContrast.pairs[].command` before continuing. Save each command, exit status, and JSON result, including FAIL results.
-For a supported dark appearance, change only `--mode light` to `--mode dark` in each command.
-Do not replace `--surface` with a default surface or skip repeated colors on different backgrounds.
-Treat every FAIL as a defect. Correct it and rerun the measurement and commands.
-For every `textContrast.unresolved` item, inspect the named element and resolve the actual foreground and background before using `palette check`.
-If you cannot resolve an item, record its selector, sample, reason, and state as an exact unverified item.
-Do not claim complete contrast acceptance while any FAIL or unresolved item remains.
-Repeat the measurements, commands, and screenshots after interaction state changes.
+For an `html` Artifact using the default [HTML workbench](html-workbench.md) baseline, require `workbench.bodyFontSize === 13.5`, `workbench.h1FontSize <= 16`, `workbench.h2FontSize <= 16`, `workbench.hasStageWindow === true`, `workbench.themeButtonCount === 3`, and `workbench.hasFootnote === true`. For the default multi-tab workbench, also require `workbench.hasWindowChrome === true`, `workbench.tabCount >= 3 && workbench.tabCount <= 5`, `workbench.hasLayoutToggle === true`, `workbench.hasQuotaStrip === true`, and `workbench.masterDetailCount >= 1`.
+Run every `textContrast.pairs[].command` before continuing. Save each command, exit status, and JSON result, including FAIL results. For a supported dark appearance, change only `--mode light` to `--mode dark` in each command. Do not replace `--surface` with a default surface or skip repeated colors on different backgrounds. Treat every FAIL as a defect, fix it, and rerun the measurement and commands. For every `textContrast.unresolved` item, inspect the named element and resolve the actual foreground and background before using `palette check`, or record its selector, sample, reason, and state as an exact unverified item. Do not claim complete contrast acceptance while any FAIL or unresolved item remains. Repeat the measurements, commands, and screenshots after interaction state changes.
 
-The expression uses a one-pixel sRGB canvas to convert CSS colors and composite ancestor backgrounds over white.
-It composites foreground alpha over the resulting background before producing opaque hex values for the CLI.
-Pairs are deduplicated by foreground and background, with a sample count and one text example.
-It marks uncovered background boxes, images, gradients, filters, blending, opacity, masks, pseudo-element text, and overlapping boxes as unresolved.
-Native controls, SVG, canvas, frames, and open shadow roots need separate inspection and appear as unresolved items.
-Page JavaScript cannot measure text inside closed shadow roots, so inspect that text in screenshots.
-Inspect screenshots for box-shadow or outline spotlights and absolute pseudo-element overlays from sibling elements.
-Inspect slotted light-DOM text for backgrounds painted inside shadow roots.
-Inspect screenshots for `background-clip` padding-box/content-box, negative `z-index` text behind overlays, and overlays outside `<body>`.
-This is DOM screening, not a pixel audit. Inspect screenshots for clipping, hidden text, text effects, and non-white browser canvas defaults.
-Dark browser canvas defaults declared by CSS or metadata appear as unresolved items when no opaque background covers the text. Resolve any other non-white canvas default before acceptance.
+The expression composites ancestor backgrounds over white in a one-pixel sRGB canvas and composites foreground alpha over the resulting background before producing opaque hex values for the CLI. It marks uncovered background boxes, images, gradients, filters, blending, opacity, masks, pseudo-element text, overlapping boxes, native controls, SVG, canvas, frames, and open shadow roots as unresolved. Inspect screenshots for closed shadow roots, box-shadow or outline spotlights, absolute pseudo-element overlays, slotted light-DOM text over shadow backgrounds, `background-clip` padding-box/content-box, negative `z-index` text behind overlays, clipping, hidden text, text effects, and non-white browser canvas defaults.
 
 ## Inspect and exercise
 
@@ -291,29 +291,19 @@ At both viewport sizes, perform these checks on the rendered page:
 6. For prototypes, execute the selected flow's failure and recovery using the [prototype contract](preset-prototype.md).
 7. Collect console events after the flow. Fix Artifact errors and broken states before rerunning the affected checks.
 
-Measure page overflow at both widths and after state changes. Require `pageWidth <= viewport`.
-Do not mask overflow with page-level `overflow-x: hidden`. Reflow the offending content.
-A necessary two-dimensional table can scroll inside a labeled, keyboard-reachable container. The page must still fit the viewport.
+Measure page overflow at both widths and after state changes (`pageWidth <= viewport`). Do not mask overflow with page-level `overflow-x: hidden`; reflow the offending content. A necessary two-dimensional table can scroll inside a labeled, keyboard-reachable container while the page fits the viewport.
 
-Use the measured color pairs and commands above for all returned text, not only text that looks suspect.
-Keep contrast math in `blueprint palette check`. Do not calculate contrast in page JavaScript.
-This screening requires 4.5:1 for text. A numeric PASS does not prove readability, hierarchy, or full accessibility.
-Inspect screenshots as well. If the Artifact supports multiple appearance modes, repeat for each supported mode.
-Do not add an appearance mode for this procedure.
+Run the measured color commands for all returned text in each supported appearance mode (`4.5:1` minimum). Do not calculate contrast in page JavaScript or add an appearance mode for this procedure.
 
 ## Finish with evidence
 
-Fix clipping, overlap, unreadable text, broken controls or states, and page-level horizontal overflow before delivery.
-Rerun the affected interactions, measurements, and screenshots after each correction.
-A saved screenshot without opening it does not establish visual acceptance.
+Fix clipping, overlap, unreadable text, broken controls or states, and page-level horizontal overflow before delivery, then rerun the affected checks and open each saved screenshot.
 
-Keep the acceptance evidence outside published content. Record these details in the handoff:
+Keep the acceptance evidence outside published content and record in the handoff:
 
 - Artifact entry URL and the exact version or files tested.
 - Viewport sizes, screenshot paths, and what you observed when opening each image.
 - Controls and keyboard paths exercised, including the prototype failure and recovery result.
 - Page-width measurements, color pairs, palette results, unresolved elements, console findings, corrections, and anything still unverified.
 
-Keep the browser session available while inspecting screenshots and rerunning corrections.
-After those steps pass, close the browser session according to the host environment's browser instructions.
-Keep a result page only when the user needs it to continue. Stop your preview process after the browser work ends.
+Close the browser session and stop your preview process after acceptance, keeping a result page only when the user needs it to continue.
