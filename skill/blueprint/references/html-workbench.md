@@ -14,7 +14,7 @@ Match the chrome density to the scope of the Artifact.
 
 ## Light and dark palette tokens
 
-Keep surfaces neutral so data marks and interactive selection carry focus. All foreground tokens below pass text contrast against every workbench surface token in both modes.
+Keep surfaces neutral so data marks and interactive selection carry focus. The five text tokens (`--fg`, `--text-soft`, `--muted`, `--attention`, `--live`) pass text contrast against every workbench surface token in both modes.
 
 Set `--chart-surface` to `#ffffff` in light mode and `#161719` in dark mode. Chart marks from [chart method](chart-method.md) then keep screened contrast inside `.bar-well` tracks and `.plot-card` panels.
 
@@ -31,7 +31,6 @@ Set `--chart-surface` to `#ffffff` in light mode and `#161719` in dark mode. Cha
   --muted: #5c6068;
   --attention: #0558b8;
   --live: #186833;
-  --idle-dot: #85878d;
   --line: #dfe2e6;
   --line-strong: #c4c9d0;
   --window-shadow: 0 16px 40px rgb(16 18 22 / 0.08), 0 2px 8px rgb(16 18 22 / 0.04);
@@ -53,7 +52,6 @@ Set `--chart-surface` to `#ffffff` in light mode and `#161719` in dark mode. Cha
   --muted: #9c9ea3;
   --attention: #58a6ff;
   --live: #65c888;
-  --idle-dot: #85878d;
   --line: #2a2c31;
   --line-strong: #3c3f46;
   --window-shadow: 0 20px 44px rgb(0 0 0 / 0.36), 0 4px 12px rgb(0 0 0 / 0.2);
@@ -76,7 +74,6 @@ Set `--chart-surface` to `#ffffff` in light mode and `#161719` in dark mode. Cha
     --muted: #9c9ea3;
     --attention: #58a6ff;
     --live: #65c888;
-    --idle-dot: #85878d;
     --line: #2a2c31;
     --line-strong: #3c3f46;
     --window-shadow: 0 20px 44px rgb(0 0 0 / 0.36), 0 4px 12px rgb(0 0 0 / 0.2);
@@ -88,7 +85,7 @@ Set `--chart-surface` to `#ffffff` in light mode and `#161719` in dark mode. Cha
 }
 ```
 
-If the page uses chart tokens with a manual theme control, copy the dark `--chart-*` values from [chart method](chart-method.md) into `[data-theme="dark"]` and `:root:not([data-theme="light"])`. Keep manual theme toggling in sync with OS changes.
+If you combine [chart method](chart-method.md) tokens with a manual theme toggle, place the light `--chart-*` values inside `:root, [data-theme="light"]`. Place the dark `--chart-*` series, sequential, diverging, and status values inside `[data-theme="dark"]` and `@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) }`. Keep `--chart-surface` at `#161719` in dark mode. Delete any standalone `:root` or `@media (prefers-color-scheme: dark) { :root }` chart blocks so OS dark rules cannot override Light mode. Keep manual theme toggling in sync with OS changes.
 
 ## Workbench layout and typography
 
