@@ -14,7 +14,7 @@ flowchart TB
     Agent["Host coding agent"]:::actor
 
     Skill["Bundled Agent Skill<br/>preset selection · research · direct composition<br/>upgrade merge · visual judgment"]:::skill
-    Refs["Skill references<br/>preset-*.md · architecture-diagrams.md<br/>theme-*.md · design-system.md<br/>chart-method.md · rendered-acceptance.md"]:::skill
+    Refs["Skill references<br/>preset-*.md · architecture-diagrams.md<br/>theme-*.md · design-system.md<br/>html-workbench.md · chart-method.md · chart-verification.md · rendered-acceptance.md"]:::skill
 
     subgraph CLI["blueprint CLI"]
         direction TB
@@ -34,7 +34,7 @@ flowchart TB
     Sources["Agent-authored sources<br/>diagram.svg · semantic content"]:::artifact
     Artifact["Managed Artifact<br/>entry · inline SVG · chrome/runtime"]:::artifact
     ProjectMeta[".blueprint.json<br/>identity · preset · createdWith<br/>deployment record · protection"]:::artifact
-    Html["Unthemed html Artifact<br/>agent-owned HTML · CSS · JS · local assets<br/>existing lifecycle · no injected chrome"]:::artifact
+    Html["Standalone html Artifact<br/>agent-owned HTML · CSS · JS · local assets<br/>existing lifecycle · no CLI-injected chrome"]:::artifact
     Progress["Progress Preset<br/>agent-owned progress.json · derived owner views<br/>shared tokens · fixed layout · native disclosures"]:::artifact
     Portable["Portable architecture exports<br/>SVG · PNG"]:::artifact
 
@@ -44,10 +44,10 @@ flowchart TB
 
     User --> Agent
     Agent --> Skill
-    Skill -->|"themed / diagram workflows · chart method"| Refs
+    Skill -->|"preset / theme / workbench · chart method"| Refs
     Skill -->|"invokes"| Commands
     Skill -->|"writes"| Sources
-    Skill -->|"direct authoring · no Theme references"| Html
+    Skill -->|"direct authoring · html-workbench baseline"| Html
     Commands -->|"minimal create · preserve on repeat"| Html
     Validator -->|"document basics"| Html
     Html --> Preview

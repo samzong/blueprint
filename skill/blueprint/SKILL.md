@@ -49,7 +49,7 @@ Ask at most one blocking question and only for missing information that changes 
 
 Create a `progress` Artifact only when the owner explicitly requests that page. Do not create one by default for every task.
 
-Route ordinary agent-authored standalone HTML to `html`. Choose content, layout, CSS, and optional JavaScript independently. Do not load design-system or Theme references for `html`. Use another themed workflow when explicitly selected; preserve the existing Preset for managed Artifacts.
+Route ordinary agent-authored standalone HTML to `html`. Load [HTML workbench](references/html-workbench.md) as the default visual baseline unless the user requests another visual direction or layout reference. Do not load `design-system.md` or other Presets' `theme-*.md` references for `html`. Preserve the existing Preset and styling for managed Artifacts.
 
 Ask for the primary audience or delivery form only when multiple rows or none match.
 
@@ -76,7 +76,7 @@ When rebuilding a legacy page or time-sensitive product story:
 
 | Preset | References |
 |---|---|
-| `html` | [rendered acceptance](references/rendered-acceptance.md) |
+| `html` | [HTML workbench](references/html-workbench.md), [rendered acceptance](references/rendered-acceptance.md) |
 | `progress` | [design system](references/design-system.md), [progress contract](references/preset-progress.md) |
 | `architecture` | [diagram direction](references/architecture-diagrams.md), [architecture contract](references/preset-architecture.md) |
 | `pitch` | [design system](references/design-system.md), [pitch contract](references/preset-pitch.md) |
@@ -86,7 +86,7 @@ When rebuilding a legacy page or time-sensitive product story:
 | `prototype-lite`, `prototype-full` | [design system](references/design-system.md), [prototype contract](references/preset-prototype.md), [rendered acceptance](references/rendered-acceptance.md) |
 | `dossier` | [design system](references/design-system.md), [dossier contract](references/preset-dossier.md) |
 
-When an Artifact contains charts, read [chart method](references/chart-method.md) before authoring or revising them. Within Blueprint Artifacts this reference governs chart method, even when another chart Skill is available. Apply its form/encoding rules before drawing and complete its rendered acceptance steps before delivery. Copy its dashboard shell and shared label-column layout for dashboards, bind chart colors through CSS custom properties, and verify light → dark → filter → light when both modes are supported. It supplies copyable defaults for stated surfaces and rendered acceptance checks; it does not select a Theme or alter the `html` scaffold. Keep the dossier entity-slot contract.
+When an Artifact contains charts, read [chart method](references/chart-method.md) and [chart verification](references/chart-verification.md) before authoring or revising them. Within Blueprint Artifacts these references govern chart method, even when another chart Skill is available. Apply the form and encoding rules before drawing and complete the chart acceptance steps before delivery. For `html`, keep the outer shell and card borders from [HTML workbench](references/html-workbench.md) and apply the chart guides to palettes, plot canvases, bar tracks, scales, and accessible data tables. Bind chart colors through CSS custom properties, and make sure that light -> dark -> filter -> light keeps working when both modes exist. They supply copyable defaults for plot surfaces and rendered acceptance steps. They do not add a CLI Theme or alter the `html` scaffold. Keep the dossier entity-slot contract.
 
 ### Generate
 
@@ -99,7 +99,7 @@ When an Artifact contains charts, read [chart method](references/chart-method.md
    blueprint check <output>/index.html
    ```
 
-4. For `html`, run `blueprint create html <output>` first, then directly author `<output>/index.html` and run `blueprint check <output>`. Keep the stable directory and CLI-owned manifest. Author local images, CSS, JavaScript, and data in any layout under the Artifact directory. No framework bootstrap is required. Keep private working notes under `.local/` or outside the Artifact; dotfiles and hidden directories are not published, and symbolic links are rejected. Repeating create checks and preserves existing HTML.
+4. For `html`, run `blueprint create html <output>` first. Apply [HTML workbench](references/html-workbench.md) by default when no other visual direction is requested, directly author `<output>/index.html` and local assets, then run `blueprint check <output>`. Keep the stable directory and CLI-owned manifest. Author local images, CSS, JavaScript, and data in any layout under the Artifact directory. No framework bootstrap is required. Keep private working notes under `.local/` or outside the Artifact. Dotfiles and hidden directories are not published, and symbolic links are rejected. Repeating create preserves existing HTML.
 5. For `progress`, run `blueprint create progress <output>`, then edit only `src/progress.json`. After every item status change or new owner decision, update the JSON and `updated_at`, then rerun `blueprint create progress <output>` and `blueprint check <output>`. The repeated create reads the JSON and preserves project identity. `check` validates but does not compile the page. If check fails, fix the JSON and repeat both commands.
 6. For `prototype-lite`, `prototype-full`, or `dossier`, run `blueprint create <preset> <output>` before filling topic-specific content.
 7. For `html`, `prototype-lite`, and `prototype-full`, complete [rendered acceptance](references/rendered-acceptance.md) before delivery. Run `check` on the final content and start the required local preview. Follow the host environment's browser instructions and use its browser automation at wide and narrow widths. Open and inspect screenshots, exercise controls and keyboard paths, inspect console events, and fix visual or functional defects. For prototypes, finish the reviewed flow through failure and recovery. Return the path and acceptance evidence. If a required capability is unavailable, report the exact unverified scope instead of claiming completion.
@@ -113,7 +113,7 @@ Treat an upgrade as a preservation-first semantic merge, not regeneration.
 
 1. Run `blueprint list --json` and `blueprint --version`. Use the discovered `preset` to select the current references. Treat the discovered `createdWith` as the single version marker for the latest Blueprint preset contract successfully applied to the Artifact.
 2. Inspect the current sources, output, and Git diff or history when available before writing. Treat content, branding, customized themes, custom CSS, and layout as user-owned even when they began as preset defaults.
-3. For `html`, preserve the complete entry, CSS, and JavaScript. Apply only required delivery-contract corrections in place; never inject a Theme, design system, chrome, or framework. If the existing content conflicts with the current HTML delivery contract, report the concrete conflict instead of overwriting it.
+3. For `html`, preserve the complete entry, CSS, and JavaScript. Apply only required delivery-contract corrections in place. Never inject a Theme, design system, chrome, or framework, and do not retrofit [HTML workbench](references/html-workbench.md) unless the user asks for it. If the existing content conflicts with the current HTML delivery contract, report the concrete conflict instead of overwriting it.
 4. Compare the Artifact with the current preset references. Apply missing Blueprint-owned runtime, compiler chrome, validation, accessibility, and required structural improvements with the smallest patch. Do not retrofit new default styling unless the user asks for it.
 5. Preserve user-owned changes. When a required Blueprint change overlaps them, merge around the customization when safe; otherwise stop and report the conflict instead of overwriting it.
 6. Do not copy a fresh preset over the project or begin by rerunning `blueprint create`. For compiled presets, regenerate compiler-owned output only after preserving any output-only customization in semantic sources. For scaffold presets, patch the existing source in place.
