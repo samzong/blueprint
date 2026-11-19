@@ -98,7 +98,10 @@
       }
     }
     if (svgReasons.size) recordUnresolved(svg, text(svg).slice(0, 80), Array.from(svgReasons));
+    const hasDirectText = node => Array.from(node.childNodes).some(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
     const texts = Array.from(svg.querySelectorAll("text")).filter(t => !inDefs(t) && visible(t));
+    const textLeaves = Array.from(svg.querySelectorAll("text, tspan"))
+      .filter(n => !inDefs(n) && hasDirectText(n) && visible(n));
     const paintedShapes = Array.from(svg.querySelectorAll("rect, path, circle, ellipse, polygon"))
       .filter(s => !inDefs(s) && visible(s));
     const commands = new Set();
@@ -108,12 +111,6 @@
     let maxScale = null;
     let minTextPx = null;
     for (const t of texts) {
-      const ctm = t.getScreenCTM();
-      const scale = ctm ? Math.min(Math.hypot(ctm.a, ctm.b), Math.hypot(ctm.c, ctm.d)) : 1;
-      const actualPx = parseFloat(styleOf(t).fontSize) * scale;
-      minScale = minScale === null ? scale : Math.min(minScale, scale);
-      maxScale = maxScale === null ? scale : Math.max(maxScale, scale);
-      minTextPx = minTextPx === null ? actualPx : Math.min(minTextPx, actualPx);
       const b = box(t).bounds;
       const label = text(t).slice(0, 80);
       if (b.left < svgBounds.left - 2 || b.right > svgBounds.right + 2 ||
@@ -121,9 +118,21 @@
         svgOverflows.push(label);
       }
       textBoxes.push({ label, bounds: b });
+    }
+    for (const leaf of textLeaves) {
+      const ctm = leaf.getScreenCTM();
+      const scale = ctm ? Math.min(Math.hypot(ctm.a, ctm.b), Math.hypot(ctm.c, ctm.d)) : 1;
+      const actualPx = parseFloat(styleOf(leaf).fontSize) * scale;
+      minScale = minScale === null ? scale : Math.min(minScale, scale);
+      maxScale = maxScale === null ? scale : Math.max(maxScale, scale);
+      minTextPx = minTextPx === null ? actualPx : Math.min(minTextPx, actualPx);
+      const b = box(leaf).bounds;
+      const label = text(leaf).slice(0, 80);
       if (svgSurface) {
-        const localReasons = svgEffectReasons(t, svg);
-        if (Number(styleOf(t).fillOpacity || 1) < 1) localReasons.add("SVG fill-opacity");
+        const localReasons = svgEffectReasons(leaf, svg);
+        for (let cur = leaf; cur && cur.localName !== "svg"; cur = cur.parentElement) {
+          if (Number(styleOf(cur).fillOpacity || 1) < 1) localReasons.add("SVG fill-opacity");
+        }
         let localSurface = svgSurface;
         let surfaceUncertain = false;
         for (const s of paintedShapes) {
@@ -131,7 +140,7 @@
           if (!st.fill || st.fill === "none" || st.fill === "transparent") continue;
           const sb = box(s).bounds;
           if (!intersects(sb, b)) continue;
-          const pos = s.compareDocumentPosition(t);
+          const pos = s.compareDocumentPosition(leaf);
           if (pos & Node.DOCUMENT_POSITION_PRECEDING) {
             localReasons.add("SVG shape over text");
             continue;
@@ -151,23 +160,11 @@
         if (surfaceUncertain) localReasons.add("SVG uncertain surface");
         if (localReasons.size) {
           recordUnresolved(svg, label, Array.from(localReasons));
-        } else if (/^url\(/i.test(styleOf(t).fill)) {
+        } else if (/^url\(/i.test(styleOf(leaf).fill)) {
           recordUnresolved(svg, label, ["SVG paint server fill"]);
         } else {
-          const tf = compositeHex(styleOf(t).fill, localSurface);
+          const tf = compositeHex(styleOf(leaf).fill, localSurface);
           if (tf) commands.add(`blueprint palette check '${tf}' --mode light --kind text --surface '${localSurface}' --json`);
-        }
-        for (const ts of t.querySelectorAll("tspan")) {
-          const tsReasons = svgEffectReasons(ts, svg);
-          if (Number(styleOf(ts).fillOpacity || 1) < 1) tsReasons.add("SVG fill-opacity");
-          if (tsReasons.size || localReasons.size) {
-            recordUnresolved(svg, text(ts).slice(0, 80), Array.from(new Set([...localReasons, ...tsReasons])));
-          } else if (/^url\(/i.test(styleOf(ts).fill)) {
-            recordUnresolved(svg, text(ts).slice(0, 80), ["SVG paint server fill"]);
-          } else {
-            const tsf = compositeHex(styleOf(ts).fill, localSurface);
-            if (tsf) commands.add(`blueprint palette check '${tsf}' --mode light --kind text --surface '${localSurface}' --json`);
-          }
         }
       }
     }

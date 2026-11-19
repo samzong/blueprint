@@ -220,14 +220,14 @@
       seenIds.add(id);
     }
   }
+  const hasDirectText = node => Array.from(node.childNodes).some(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
   const rawFontSizes = [];
   for (const element of elements) {
     if (element.closest("script, style, noscript, template, svg, code, pre, kbd, samp, .key-badge")) continue;
-    const hasDirectText = Array.from(element.childNodes).some(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
-    if (hasDirectText) rawFontSizes.push(parseFloat(styleOf(element).fontSize));
+    if (hasDirectText(element)) rawFontSizes.push(parseFloat(styleOf(element).fontSize));
   }
-  for (const t of document.querySelectorAll("svg text")) {
-    if (t.closest("defs, clipPath, mask, pattern, symbol") || !visible(t)) continue;
+  for (const t of document.querySelectorAll("svg text, svg tspan")) {
+    if (t.closest("defs, clipPath, mask, pattern, symbol") || !hasDirectText(t) || !visible(t)) continue;
     if (styleOf(t).fontFamily.includes("monospace")) continue;
     const ctm = t.getScreenCTM();
     const scale = ctm ? Math.min(Math.hypot(ctm.a, ctm.b), Math.hypot(ctm.c, ctm.d)) : 1;

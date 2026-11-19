@@ -191,7 +191,7 @@ Build the multi-tab shell with `.page-shell`, `.top-note`, `.stage-window`, and 
   const tabs = Array.from(document.querySelectorAll(".vtab[data-tab]"));
   const panels = Array.from(document.querySelectorAll(".view-panel"));
   const layoutToggle = document.getElementById("layout-toggle");
-  let activeTab = tabs[0]?.dataset.tab || "";
+  let activeTab = tabs.find(tab => tab.getAttribute("aria-selected") === "true")?.dataset.tab || tabs[0]?.dataset.tab || "";
 
   function syncPanels() {
     const full = document.body.dataset.layout === "full";
@@ -199,6 +199,8 @@ Build the multi-tab shell with `.page-shell`, `.top-note`, `.stage-window`, and 
       panel.hidden = !full && panel.id !== `panel-${activeTab}`;
     });
   }
+
+  if (tabs.length > 0) syncPanels();
 
   function selectTab(tabKey) {
     activeTab = tabKey;
