@@ -2,15 +2,18 @@
 
 Use this baseline as the default visual direction for `html` Artifacts. Follow this guide when the user gives no other style, brand system, or layout reference. If the user asks for another visual look or brand palette, follow the user request instead.
 
-The CLI injects no CSS, chrome, or JavaScript framework for `html`. You author the complete HTML, CSS, and optional JavaScript inside the Artifact directory.
+Combe and Spale set the visual craft for this baseline. Use quiet light and dark neutral gray surfaces, subtle elevation steps, and `1px` borders. Limit accent color to one or two semantic roles for focus, selection, or live state. The CLI injects no CSS, chrome, or JavaScript framework for `html`. Author the complete HTML, CSS, and optional JavaScript inside the Artifact directory.
 
-## Choose the shell size
+## Let layout follow content
 
-Match the chrome density to the scope of the Artifact.
+Keep the neutral surface tokens, font discipline, and three-mode `[data-theme-mode]` switch across default `html` Artifacts. Design the spatial layout around the subject instead of forcing every topic into one template. Match page chrome to the complexity of the content:
 
-- Multi-tab workbench (default for project explainers, system guides, cross-functional shares, reports, and dashboards): Use `.page-shell`, `.top-note`, `#layout-toggle`, the three-mode `[data-theme-mode]` switch (`system`, `light`, `dark`), `.stage-window`, `.window-chrome`, `.view-tabs` (3 to 5 tabs with `.key-badge` numbers `1` through `N`), `.quota-strip` (3 to 4 key figures), `.master-detail` split views, and `.footnote`.
-- Single-panel window: Omit `.view-tabs` and `.master-detail` only when the user explicitly requests a single-view utility or one standalone chart. Keep `.page-shell`, `.top-note`, the `[data-theme-mode]` switch, `.stage-window`, `.pane-head`, and `.footnote`.
-- Full-scroll toggle: Include `#layout-toggle` in `.preview-tools` on every multi-tab workbench so the user can view all tab panels at once (`body[data-layout="full"] .view-panel[hidden] { display: block !important; }`).
+- Choose a form that fits the task, such as a reader, canvas, simulator, calculator, matrix, or workbench.
+- Omit `.view-tabs`, `.quota-strip`, and `.master-detail` when a direct layout communicates the content with less chrome.
+- Make every visible text element carry data, state, units, or a conclusion.
+- Express hierarchy, grouping, and operation through spacing, alignment, and control state.
+- If a section needs helper copy to explain page controls, redesign the layout instead.
+- If a topic spans 3 to 5 distinct views, load [HTML workbench multi-tab shell](html-workbench-tabs.md).
 
 ## Light and dark palette tokens
 
@@ -21,6 +24,8 @@ Set `--chart-surface` to `#ffffff` in light mode and `#161719` in dark mode. Cha
 ```css
 :root, [data-theme="light"] {
   color-scheme: light;
+  --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --page: #e7e8eb;
   --bg: #f5f5f7;
   --surface-subtle: #eceef1;
@@ -85,11 +90,11 @@ Set `--chart-surface` to `#ffffff` in light mode and `#161719` in dark mode. Cha
 }
 ```
 
-If you combine [chart method](chart-method.md) tokens with a manual theme toggle, place the light `--chart-*` values inside `:root, [data-theme="light"]`. Place the dark `--chart-*` series, sequential, diverging, and status values inside `[data-theme="dark"]` and `@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) }`. Keep `--chart-surface` at `#161719` in dark mode. Delete any standalone `:root` or `@media (prefers-color-scheme: dark) { :root }` chart blocks so OS dark rules cannot override Light mode. Keep manual theme toggling in sync with OS changes.
+If you combine [chart method](chart-method.md) tokens with a manual theme toggle, place the light `--chart-*` values inside `:root, [data-theme="light"]`. Place the dark `--chart-*` series, sequential, diverging, and status values inside `[data-theme="dark"]` and `@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) }`. Keep `--chart-surface` at `#161719` in dark mode. Delete standalone `:root` chart blocks so OS dark rules do not override Light mode. Keep manual theme selection synchronized with OS color-scheme changes.
 
-## Workbench layout and typography
+## Base typography and theme switch
 
-Keep body copy compact at `13.5px` (`line-height: 1.55`) with system sans fonts and `font-variant-numeric: tabular-nums` on numbers, ranks, and counts. Keep `h1` and `h2` at `15px` to `16px` (`font-weight: 600`), `h3` at `13px` to `13.5px`, `.vtab` at `12px` to `12.5px` (`height: 34px`), and `.card-btn` titles at `13px`. Do not enlarge body copy to `15px` or headings to `18px`–`40px` for screen sharing or presentation rooms. Add these base styles and component classes after the tokens above.
+Use `--font-sans` for natural-language prose and UI labels. Use `--font-mono` with `font-variant-numeric: tabular-nums` for code, paths, identifiers, and aligned counts across HTML and SVG. Keep each page within three or four font-size steps so visual hierarchy stays clear. For compact tools and workbenches, set `body` between `12px` and `13.5px` with `line-height` from `1.5` to `1.55`. Set `h1` and `h2` to `15px` or `16px` at `font-weight: 600`. Reading-focused pages can use a `14px` to `15px` body within four font-size steps.
 
 ```css
 *, *::before, *::after { box-sizing: border-box; }
@@ -98,17 +103,15 @@ body {
   margin: 0;
   background-color: var(--page);
   color: var(--fg);
-  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif;
+  font-family: var(--font-sans);
   font-size: 13.5px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
 :focus-visible { outline: 2px solid var(--attention); outline-offset: 2px; }
 [hidden] { display: none !important; }
-body[data-layout="full"] .view-panel[hidden] { display: block !important; }
-body[data-layout="full"] .view-panel + .view-panel { border-top: 2px solid var(--line-strong); }
 details:not([open]) > *:not(summary) { display: none; }
-code, pre, kbd, .code-token { font-family: Menlo, Consolas, "Courier New", Courier, monospace; font-size: 0.88em; }
+code, pre, kbd, .code-token { font-family: var(--font-mono); font-size: 0.88em; }
 .num, td.num, th.num { font-variant-numeric: tabular-nums; }
 code {
   display: inline-block;
@@ -149,8 +152,8 @@ kbd {
 h1 { margin: 0; font-size: 15px; line-height: 1.3; font-weight: 600; color: var(--fg); }
 h2 { margin: 0 0 3px; font-size: 15px; line-height: 1.35; font-weight: 600; color: var(--fg); }
 h3 { margin: 0 0 10px; font-size: 13px; line-height: 1.4; font-weight: 600; color: var(--fg); }
-.note-sub, .view-lead { margin: 0; font-size: 12px; line-height: 1.45; color: var(--muted); }
-.preview-tools, .view-tabs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.note-sub { margin: 0; font-size: 12px; line-height: 1.45; color: var(--muted); }
+.preview-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
 .pill-track {
   display: inline-flex;
   flex-wrap: wrap;
@@ -193,122 +196,6 @@ h3 { margin: 0 0 10px; font-size: 13px; line-height: 1.4; font-weight: 600; colo
   border-color: var(--attention);
   font-weight: 600;
 }
-.stage-window {
-  background-color: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  box-shadow: var(--window-shadow);
-  overflow: hidden;
-  min-width: 0;
-}
-.window-chrome, .pane-head, .workbench-controls {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--line);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px 14px;
-}
-.workbench-controls { flex-direction: column; align-items: stretch; gap: 10px; }
-.vtab {
-  appearance: none;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--muted);
-  background-color: var(--surface-subtle);
-  border: 1px solid transparent;
-  border-radius: 17px;
-  height: 34px;
-  padding: 0 10px 0 14px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.vtab:hover { color: var(--fg); background-color: var(--surface-selected); }
-.vtab[aria-selected="true"] {
-  background-color: var(--surface-elevated);
-  color: var(--fg);
-  border-color: var(--line-strong);
-  box-shadow: var(--tab-shadow);
-  font-weight: 600;
-}
-.key-badge {
-  width: 18px;
-  height: 18px;
-  border-radius: 9px;
-  background-color: var(--surface-selected);
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 18px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-.vtab[aria-selected="true"] .key-badge { background-color: var(--surface-subtle); color: var(--fg); }
-.quota-strip {
-  min-height: 28px;
-  border-radius: 14px;
-  padding: 4px 12px;
-  background-color: var(--surface-subtle);
-  border: 1px solid var(--line);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 14px;
-  font-size: 12px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-.quota-item b { color: var(--fg); font-weight: 600; }
-.master-detail {
-  display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(24rem, 1fr);
-  align-items: stretch;
-}
-.master-detail > * { min-width: 0; }
-.list-pane { padding: 14px 18px 18px; display: flex; flex-direction: column; gap: 10px; }
-.readout-pane {
-  border-left: 1px solid var(--line);
-  padding: 16px 18px;
-  position: sticky;
-  top: 0;
-  align-self: start;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.cap-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.cap-cell {
-  padding: 8px 11px;
-  background-color: var(--surface-subtle);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  min-width: 0;
-}
-.cap-cell.is-highlighted { background-color: var(--surface-elevated); border-color: var(--attention); box-shadow: var(--tab-shadow); }
-.token-box { padding: 8px 12px; background-color: var(--surface-subtle); border-left: 2px solid var(--attention); }
-.card-btn {
-  width: 100%;
-  appearance: none;
-  font-family: inherit;
-  text-align: left;
-  background-color: var(--surface-subtle);
-  color: var(--fg);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 9px 12px;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.card-btn:hover { border-color: var(--line-strong); background-color: var(--surface-selected); }
-.card-btn[aria-pressed="true"] { background-color: var(--surface-elevated); border-color: var(--attention); box-shadow: var(--tab-shadow); }
-.card-btn.is-pinned { box-shadow: inset 3px 0 0 var(--attention); }
-.card-btn.is-pinned[aria-pressed="true"] { box-shadow: inset 3px 0 0 var(--attention), var(--tab-shadow); }
 .bar-well {
   width: 100%;
   height: 9px;
@@ -342,138 +229,69 @@ h3 { margin: 0 0 10px; font-size: 13px; line-height: 1.4; font-weight: 600; colo
   font-size: 11.5px;
   color: var(--muted);
 }
-@media (max-width: 64rem) {
-  .master-detail { grid-template-columns: minmax(0, 1fr); }
-  .readout-pane { border-left: none; border-top: 1px solid var(--line); position: static; }
-  .cap-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
 @media (max-width: 48rem) {
   .page-shell { padding: 12px 12px 28px; }
-  .stage-window { border-radius: 14px; }
-  .cap-grid { grid-template-columns: minmax(0, 1fr); }
 }
 ```
 
-Structure each workbench page with `.page-shell`, `.top-note`, `.stage-window`, and `.footnote`:
+Wire the three-mode `[data-theme-mode]` switch on every default `html` Artifact. When the user selects `"light"` or `"dark"`, set `document.documentElement.dataset.theme` to that mode. When the user selects `"system"`, delete `dataset.theme` so `@media (prefers-color-scheme: dark)` applies:
 
 ```html
-<div class="page-shell">
-  <header class="top-note">
-    <div class="note-brand">
-      <h1>Page title</h1>
-      <p class="note-sub">Short scope summary</p>
-    </div>
-    <div class="preview-tools">
-      <button type="button" id="layout-toggle" class="pill-btn" aria-pressed="false">Expand all panels</button>
-      <div class="pill-track" role="group" aria-label="Theme mode">
-        <button type="button" class="pill-seg" data-theme-mode="system" aria-pressed="true">System</button>
-        <button type="button" class="pill-seg" data-theme-mode="light" aria-pressed="false">Light</button>
-        <button type="button" class="pill-seg" data-theme-mode="dark" aria-pressed="false">Dark</button>
-      </div>
-    </div>
-  </header>
-  <div class="stage-window">
-    <div class="window-chrome">
-      <div class="view-tabs" role="tablist" aria-label="Workspace views">
-        <button type="button" class="vtab" role="tab" data-tab="overview" aria-controls="panel-overview" aria-selected="true"><span>Overview</span><span class="key-badge" aria-hidden="true">1</span></button>
-      </div>
-      <div class="quota-strip" role="region" aria-label="Key figures">
-        <span class="quota-item">Items <b class="num">24</b></span>
-      </div>
-    </div>
-    <main>
-      <section class="view-panel" id="panel-overview" role="tabpanel">
-        <div class="pane-head">
-          <div>
-            <h2>Overview</h2>
-            <p class="view-lead">Primary metric comparison and detail readout.</p>
-          </div>
-          <div class="pill-track" role="group" aria-label="Filter items">
-            <button type="button" class="pill-seg" data-filter="all" aria-pressed="true">All</button>
-          </div>
-        </div>
-        <div class="master-detail">
-          <div class="list-pane" id="overview-list"></div>
-          <aside class="readout-pane" id="overview-detail" aria-live="polite"></aside>
-        </div>
-      </section>
-    </main>
-  </div>
-  <footer class="footnote">
-    <span>Data scope note</span>
-    <span>Switch tabs with <kbd>1</kbd> <kbd>2</kbd></span>
-  </footer>
+<div class="pill-track" role="group" aria-label="Theme mode">
+  <button type="button" class="pill-seg" data-theme-mode="system" aria-pressed="true">System</button>
+  <button type="button" class="pill-seg" data-theme-mode="light" aria-pressed="false">Light</button>
+  <button type="button" class="pill-seg" data-theme-mode="dark" aria-pressed="false">Dark</button>
 </div>
 ```
 
-When the user selects `"light"` or `"dark"`, set `document.documentElement.dataset.theme` to that mode. When the user selects `"system"`, delete `dataset.theme` so `@media (prefers-color-scheme: dark)` applies.
-
-## Interactive state and keyboard wiring
-
-Wire every multi-tab workbench with data-driven master-detail panels, secondary `.pill-seg` filters inside `.pane-head`, `#layout-toggle`, `[data-theme-mode]`, and digit keys `1` through `N` for tab selection. Keep tab panels interactive rather than static prose columns. Do not bind unadorned `ArrowLeft` or `ArrowRight` on `document` to switch tabs, because global arrow keys hijack horizontal scrolling and text selection.
-
 ```js
-(() => {
-  const tabs = Array.from(document.querySelectorAll(".vtab[data-tab]"));
-  const panels = Array.from(document.querySelectorAll(".view-panel"));
-  const layoutToggle = document.getElementById("layout-toggle");
-
-  function selectTab(tabKey) {
-    tabs.forEach(tab => {
-      tab.setAttribute("aria-selected", String(tab.dataset.tab === tabKey));
+document.querySelectorAll("[data-theme-mode]").forEach(button => {
+  button.addEventListener("click", () => {
+    const mode = button.dataset.themeMode;
+    document.querySelectorAll("[data-theme-mode]").forEach(item => {
+      item.setAttribute("aria-pressed", String(item === button));
     });
-    panels.forEach(panel => {
-      panel.hidden = panel.id !== `panel-${tabKey}`;
-    });
-  }
-
-  tabs.forEach(tab => {
-    tab.addEventListener("click", () => selectTab(tab.dataset.tab));
-  });
-
-  if (layoutToggle) {
-    layoutToggle.addEventListener("click", () => {
-      const full = document.body.dataset.layout !== "full";
-      if (full) document.body.dataset.layout = "full";
-      else delete document.body.dataset.layout;
-      layoutToggle.setAttribute("aria-pressed", String(full));
-    });
-  }
-
-  document.querySelectorAll("[data-theme-mode]").forEach(button => {
-    button.addEventListener("click", () => {
-      const mode = button.dataset.themeMode;
-      document.querySelectorAll("[data-theme-mode]").forEach(item => {
-        item.setAttribute("aria-pressed", String(item === button));
-      });
-      if (mode === "light" || mode === "dark") {
-        document.documentElement.dataset.theme = mode;
-      } else {
-        delete document.documentElement.dataset.theme;
-      }
-    });
-  });
-
-  window.addEventListener("keydown", event => {
-    if (event.metaKey || event.ctrlKey || event.altKey) return;
-    const target = event.target;
-    if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
-    const index = Number(event.key) - 1;
-    if (index >= 0 && index < tabs.length) {
-      event.preventDefault();
-      selectTab(tabs[index].dataset.tab);
+    if (mode === "light" || mode === "dark") {
+      document.documentElement.dataset.theme = mode;
+    } else {
+      delete document.documentElement.dataset.theme;
     }
   });
-})();
+});
 ```
+
+## Inline SVG diagrams
+
+Use inline `<svg>` for topology, hierarchy, and flow relationships instead of nested prose cards. Keep SVG text at the same rendered size and font family as surrounding HTML elements. Apply these base classes to align SVG containers, strokes, and labels across desktop and narrow viewports:
+
+```css
+.svg-wrap { width: 100%; overflow: hidden; }
+:where(.svg-wrap) svg { display: block; width: 100%; height: auto; font-family: var(--font-sans); }
+:where(.svg-wrap svg) text { font-family: var(--font-sans); fill: var(--chart-text); }
+.svg-mobile { display: none !important; max-width: 340px; margin: 0 auto; }
+.svg-box { fill: var(--chart-surface); stroke: var(--chart-grid); stroke-width: 1.5px; }
+.svg-title { fill: var(--chart-text); font-size: 13px; font-weight: 600; }
+.svg-sub { fill: var(--muted); font-size: 12px; }
+.svg-tag { fill: var(--attention); font-size: 11.5px; font-weight: 600; }
+.svg-mono { font-family: var(--font-mono); font-size: 11.5px; }
+@media (max-width: 52rem) {
+  .svg-desktop { display: none !important; }
+  .svg-mobile { display: block !important; }
+}
+```
+
+1. Match each desktop `<svg>` `viewBox` width and `max-width` to its container width so `getScreenCTM()` scale stays near `1.0`.
+2. If a horizontal diagram drops below `0.9` scale at `375px`, switch to a vertical `.svg-mobile` diagram.
+3. Assign unique `id` values to `<defs>` markers and clip paths inside each `<svg>`.
+4. Bind SVG fills and strokes to CSS custom properties. Use `var(--chart-grid)` instead of `var(--line-strong)` for structural strokes.
+5. Route connectors orthogonally around nodes. Place `fill="var(--chart-surface)"` masks behind connector labels so lines do not cross text.
 
 ## Guardrails for charts and rendered acceptance
 
-Apply these rules whenever the workbench hosts charts or interactive lists so rendered acceptance passes on the first run.
+Apply these rules whenever the page hosts charts or interactive lists so rendered acceptance passes on the first run:
 
-1. Keep outer shells, filter strips, and cards styled with `--bg`, `--surface-subtle`, and `1px solid var(--line)`. Never outline outer cards with `1px solid var(--chart-grid)`.
-2. Keep `background: var(--chart-surface)` on `.bar-well`, `.bar-track`, and `.plot-card`. Reserve `var(--chart-grid)` for plot gridlines and axis ticks.
+1. Style outer shells, filter strips, and cards with `--bg`, `--surface-subtle`, and `1px solid var(--line)`. Never outline outer cards with `1px solid var(--chart-grid)`.
+2. Set `background: var(--chart-surface)` on `.bar-well`, `.bar-track`, and `.plot-card`. Reserve `var(--chart-grid)` for plot gridlines, axis ticks, and structural SVG borders.
 3. Do not use `border-left: 3px solid ...` on a pinned card that contains bars. An asymmetric border changes inner track widths across rows. Use `box-shadow: inset 3px 0 0 var(--attention)` instead.
-4. Set `display: inline-block` on inline badges and `code`. Add `details:not([open]) > *:not(summary) { display: none; }` so closed Chromium disclosure elements report zero layout rectangles during [rendered acceptance](rendered-acceptance.md).
-5. Add `<link rel="icon" href="data:,">` in `<head>` when no local icon asset exists so local previews produce zero 404 requests.
-6. Keep `.view-tabs` between 3 and 5 tabs so `.window-chrome` stays compact and does not crowd `.quota-strip`. Use a secondary `.pill-track` inside `.pane-head` for sub-views, role perspectives, or category filters instead of adding more top-level tabs.
+4. Set `display: inline-block` on inline badges and `code`. Keep `details:not([open]) > *:not(summary) { display: none; }` so closed Chromium disclosure elements report zero layout rectangles during [rendered acceptance](rendered-acceptance.md).
+5. If no local icon asset exists, keep `<link rel="icon" href="data:,">` in `<head>` to prevent preview 404 requests.
