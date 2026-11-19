@@ -266,8 +266,8 @@ Use inline `<svg>` for topology, hierarchy, and flow relationships instead of ne
 
 ```css
 .svg-wrap { width: 100%; overflow: hidden; }
-.svg-wrap svg { display: block; width: 100%; height: auto; font-family: var(--font-sans); }
-.svg-wrap svg text { font-family: var(--font-sans); fill: var(--chart-text); }
+:where(.svg-wrap) svg { display: block; width: 100%; height: auto; font-family: var(--font-sans); }
+:where(.svg-wrap svg) text { font-family: var(--font-sans); fill: var(--chart-text); }
 .svg-mobile { display: none !important; max-width: 340px; margin: 0 auto; }
 .svg-box { fill: var(--chart-surface); stroke: var(--chart-grid); stroke-width: 1.5px; }
 .svg-title { fill: var(--chart-text); font-size: 13px; font-weight: 600; }
