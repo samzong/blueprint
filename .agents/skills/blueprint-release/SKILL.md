@@ -11,17 +11,25 @@ Work only in the Blueprint repository. Publish only the application GitHub Relea
 
 A request naming a concrete version and asking to release or publish it authorizes the complete workflow: edit the package version, commit, push `main`, create and push the tag, monitor GitHub Actions, and verify both published artifacts. Do not ask for another confirmation.
 
-Keep preparation, readiness, explanation, or validation requests read-only. Require a target matching `v<major>.<minor>.<patch>` before publishing.
+Keep preparation, readiness, explanation, or validation requests read-only. Require `vX.Y.Z`, `vX.Y.Z-alpha.N`, `vX.Y.Z-beta.N`, or `vX.Y.Z-rc.N` before publishing.
+Use nonnegative integers without leading zeros for `X`, `Y`, and `Z`. Start `N` at 1 without leading zeros.
+Use alpha for incomplete features, beta for feature-complete testing, and rc when all release gates pass.
+Increment the candidate number for each publication. For fixes after a stable release, increment PATCH instead of appending a suffix.
+For an accepted candidate, promote its tested content unchanged. Change only required version metadata during promotion.
 
 Stop rather than stash, reset, discard, stage, or commit unrelated user changes. Never delete, replace, or force-move a release tag.
 
 ## Inspect Live State
 
-Read `package.json`, `.github/workflows/ci.yml`, and `.github/workflows/release.yml` before acting. Trust them over this skill if the repository release contract has changed.
+Read `package.json`, `cliff.toml`, `CHANGELOG.md`, `.github/workflows/ci.yml`, and `.github/workflows/release.yml` before acting.
+Use `package.json` as the version source. The first workflow job must reject invalid tags and mismatched manifest versions before building or publishing.
 
 Set `TAG` to the requested `v...` value and `VERSION` to the value without `v`.
 
-Then verify:
+Set `NPM_TAG` to `alpha`, `beta`, or `rc` for a prerelease. For a stable release, set `NPM_TAG=latest`.
+Use git-cliff 2.14.1 to regenerate the changelog.
+
+Then make sure that the live state meets the requirements below:
 
 ```bash
 git status --short --branch
@@ -31,6 +39,8 @@ gh release list --repo samzong/blueprint --limit 10
 git tag --sort=-version:refname | head -20
 git ls-remote --tags origin "refs/tags/$TAG"
 npm view @samzong/blueprint version
+npm view @samzong/blueprint dist-tags --json
+npm view @samzong/blueprint versions --json
 npm view "@samzong/blueprint@$VERSION" version
 ```
 
@@ -41,32 +51,38 @@ Require all of these before editing:
 - local `HEAD` equals `origin/main`
 - the requested tag does not exist locally, remotely, or as a GitHub Release
 - the requested version returns `E404` from npm
-- the requested version is greater than the latest GitHub and npm versions
-- the package version equals the latest GitHub and npm versions
+- the requested version has higher SemVer precedence than every published version in its release line
+- the package version matches its published GitHub Release and npm version, including a preceding candidate
 - commits exist after the latest published release
 
 Review the release delta with `git log` and `git diff --stat` from the latest published tag to `HEAD`. Do not infer current release state from memory.
+Compare candidate numbers numerically. If a target used undotted prereleases such as `beta1`, start dotted prereleases with the next target version.
+If the workflow and this skill disagree, stop before publication and report the conflict.
 
 ## Build the Candidate
 
-Update only `package.json`:
+Update `package.json` and regenerate `CHANGELOG.md` from Conventional Commits with `cliff.toml`:
 
 ```bash
 pnpm version "$VERSION" --no-git-tag-version
+git cliff --config cliff.toml --tag "$TAG" --ignore-tags='-(alpha|beta|rc)\.' --output CHANGELOG.md
 pnpm install --frozen-lockfile
 pnpm check
 ```
 
 Require `blueprint --version` packaging to work before publishing. Pack into a `mktemp -d` directory, install the resulting `samzong-blueprint-$VERSION.tgz` under a temporary prefix, and require its binary to print `blueprint $VERSION`. Remove the temporary directory afterward.
 
-Confirm the only tracked change is the expected `package.json` version line. Run `git diff --check`.
+Make sure that the only tracked changes are the expected package version and generated changelog. Run `git diff --check`.
+Make sure that the target changelog section contains at least one change entry. Review the generated English notes before publication.
+Prerelease tags do not split the target version's notes. Regeneration replaces candidate sections with the complete target version section.
+The workflow reads that exact section from `CHANGELOG.md` and rejects notes without change entries.
 
 ## Publish
 
-Stage only `package.json`, inspect the staged diff, and create the signed release commit:
+Stage only `package.json` and `CHANGELOG.md`, inspect the staged diff, and create the signed release commit:
 
 ```bash
-git add -- package.json
+git add -- package.json CHANGELOG.md
 git diff --cached
 git diff --cached --check
 git commit -s -m "chore: release $TAG"
@@ -88,9 +104,19 @@ If a job fails, inspect its exact failed log. Rerun failed jobs once only when e
 
 ## Verify the Published Artifact
 
-Use `gh release view` to require a non-draft, non-prerelease release for `TAG`. Download `samzong-blueprint-$VERSION.tgz` into a new temporary directory.
+Use `gh release view` to require a non-draft release for `TAG`.
+For a prerelease, require `prerelease=true` and make sure that the release did not become GitHub's latest release.
+For a stable release, require `prerelease=false`.
+Make sure that the GitHub Release notes match the target section generated from `cliff.toml`.
+Download `samzong-blueprint-$VERSION.tgz` into a new temporary directory.
 
 Require `npm view "@samzong/blueprint@$VERSION"` to report the requested version, integrity, and tarball URL. Download the GitHub asset and `npm pack` output into separate subdirectories of the temporary directory, then require their SHA-256 values to match.
+Require `npm view @samzong/blueprint dist-tags --json` to map `NPM_TAG` to `VERSION`.
+For a prerelease, make sure that npm's `latest` remains equal to its value before publication.
+
+If GitHub publication succeeds but npm publication fails, use the existing `workflow_dispatch` input `tag` after diagnosing the failure.
+The recovery path validates the manifest at the existing tag and publishes its GitHub asset to the same npm channel.
+Do not recreate the tag or GitHub Release. Do not retry an npm version that already exists.
 
 Install `@samzong/blueprint@$VERSION` from npm under a temporary prefix and require:
 

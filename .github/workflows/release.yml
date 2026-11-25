@@ -14,18 +14,67 @@ on:
 permissions:
   contents: write
 
+env:
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+
 jobs:
-  release:
-    if: github.event_name == 'push'
+  verify:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      stage: ${{ steps.meta.outputs.stage }}
+      is_prerelease: ${{ steps.meta.outputs.is_prerelease }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
       - uses: actions/setup-node@v7
         with:
           node-version: 24
 
-      - name: Verify version
-        run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+      - name: Verify SemVer tag and package.json
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(alpha|beta|rc)\.(0|[1-9][0-9]*))?$ ]]; then
+            echo "::error::Invalid SemVer release tag: $RELEASE_TAG"
+            exit 1
+          fi
+          if [[ "$RELEASE_TAG" == *-*.0 ]]; then
+            echo "::error::Prerelease numbers must start at 1"
+            exit 1
+          fi
+          if [[ "v$(node -p 'require("./package.json").version')" != "$RELEASE_TAG" ]]; then
+            echo "::error::package.json version does not match $RELEASE_TAG"
+            exit 1
+          fi
+          if [[ "$(git rev-parse HEAD)" != "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" ]]; then
+            echo "::error::Checked out commit does not match $RELEASE_TAG"
+            exit 1
+          fi
+          stage="latest"
+          is_prerelease="false"
+          if [[ "$RELEASE_TAG" == *-* ]]; then
+            stage="${RELEASE_TAG#*-}"
+            stage="${stage%%.*}"
+            is_prerelease="true"
+          fi
+          echo "stage=$stage" >> "$GITHUB_OUTPUT"
+          echo "is_prerelease=$is_prerelease" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: verify
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
 
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
@@ -41,20 +90,39 @@ jobs:
           npm install --global --prefix "$RUNNER_TEMP/blueprint" ./release/*.tgz
           "$RUNNER_TEMP/blueprint/bin/blueprint" --version
 
+      - name: Read release notes
+        run: |
+          set -euo pipefail
+          awk -v version="${RELEASE_TAG#v}" '
+            /^## \[/ {
+              if (printing) exit
+              printing = index($0, "## [" version "] (") == 1
+            }
+            printing { print }
+          ' CHANGELOG.md > release-notes.md
+          grep -q '^\* ' release-notes.md
+
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" release/*.tgz --generate-notes --verify-tag
+          IS_PRERELEASE: ${{ needs.verify.outputs.is_prerelease }}
+        run: |
+          set -euo pipefail
+          args=(--verify-tag --notes-file release-notes.md)
+          if [[ "$IS_PRERELEASE" == "true" ]]; then
+            args+=(--prerelease --latest=false)
+          fi
+          gh release create "$RELEASE_TAG" release/*.tgz "${args[@]}"
 
   publish-npm:
-    needs: release
-    if: ${{ always() && (github.event_name == 'workflow_dispatch' || needs.release.result == 'success') }}
+    needs: [verify, release]
+    if: ${{ always() && needs.verify.result == 'success' && (github.event_name == 'workflow_dispatch' || needs.release.result == 'success') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
     env:
-      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+      NPM_TAG: ${{ needs.verify.outputs.stage }}
     steps:
       - uses: actions/setup-node@v7
         with:
@@ -66,14 +134,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Invalid release tag: $RELEASE_TAG" >&2
-            exit 1
-          fi
+          set -euo pipefail
           mkdir release
           asset="samzong-blueprint-${RELEASE_TAG#v}.tgz"
           gh release download "$RELEASE_TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --pattern "$asset" \
             --dir release
-          npm publish "./release/$asset" --access public
+          npm publish "./release/$asset" --access public --tag "$NPM_TAG"
