@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.2.0] (2026-11-25)
+
+### Features
+
+* **progress:** add compact owner progress pages (#31)
+* **archive:** add source links and agent exports (#32)
+* **html:** add default workbench visual baseline (#39)
+
+### Fixes
+
+* **skill:** compute rendered contrast pairs instead of spot checks (#37)
+* **skill:** enforce multi-tab workbench chrome and typography in html baseline (#40)
+* **html:** decouple workbench craft baseline from fixed layout (#41)
+* **release:** align SemVer gates and release channels (#43)
+
+### Documentation
+
+* **skill:** use ego-browser for browser verification (#33)
+* **skill:** require rendered acceptance for html and prototypes (#34)
+* **skill:** make rendered acceptance browser-tool neutral (#36)
+* **skill:** separate disposable scratch from owner artifacts (#38)
 ## [0.1.7] (2026-10-15)
 
 ### Features

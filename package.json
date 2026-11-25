@@ -1,6 +1,6 @@
 {
   "name": "@samzong/blueprint",
-  "version": "0.1.7",
+  "version": "0.2.0",
   "description": "Deterministic Artifact scaffolding, preview, export, and deployment for the blueprint agent skill.",
   "license": "MIT",
   "repository": {
